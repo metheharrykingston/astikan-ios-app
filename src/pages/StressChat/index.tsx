@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  FiArrowLeft,
   FiActivity,
+  FiArrowLeft,
   FiHeart,
-  FiMic,
   FiMoon,
-  FiSend,
   FiSmile,
   FiSquare,
   FiSun,
@@ -13,26 +11,18 @@ import {
   FiZap,
 } from "react-icons/fi"
 import { useNavigate } from "react-router-dom"
+import { getStressHistory, saveStressEntry, type StressActivityType, type StressEntry, type StressSummary } from "../../services/stressApi"
+import { armAudioContext, startAmbientTrack, stopAmbientTrack } from "../../utils/sound"
 import "./stresschat.css"
 
 type Mode = null | "breathing" | "sleep"
-type SpeechRecognitionInstance = {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  onresult: ((event: any) => void) | null
-  onerror: (() => void) | null
-  onend: (() => void) | null
-  start: () => void
-  stop: () => void
-}
 
 type ActivityItem = {
   id: string
   title: string
   subtitle: string
   tone: "blue" | "pink" | "purple" | "teal"
-  icon: React.ReactElement
+  icon: JSX.Element
   action?: Mode
 }
 
@@ -44,16 +34,16 @@ type SleepRecording = {
 }
 
 const activityItems: ActivityItem[] = [
-  { id: "breathing", title: "Breathing", subtitle: "2 mins", tone: "blue", icon: <FiWind />, action: "breathing" },
-  { id: "meditation", title: "Meditation", subtitle: "Calm mind", tone: "pink", icon: <FiHeart /> },
-  { id: "sleep", title: "Sleep Sounds", subtitle: "Night mode", tone: "purple", icon: <FiMoon />, action: "sleep" },
-  { id: "reset", title: "Mood Reset", subtitle: "Quick relax", tone: "teal", icon: <FiSmile /> },
+  { id: "breathing", title: "Breathing", subtitle: "Track a calm cycle", tone: "blue", icon: <FiWind />, action: "breathing" },
+  { id: "meditation", title: "Meditation", subtitle: "Mind reset log", tone: "pink", icon: <FiHeart /> },
+  { id: "sleep", title: "Sleep Sounds", subtitle: "Night recording", tone: "purple", icon: <FiMoon />, action: "sleep" },
+  { id: "reset", title: "Mood Reset", subtitle: "Doctor check-in", tone: "teal", icon: <FiSmile /> },
 ]
 
 const ritualCards = [
-  { title: "Morning Breath", progress: 70, icon: <FiSun /> },
-  { title: "Hydration Break", progress: 45, icon: <FiActivity /> },
-  { title: "Evening Unwind", progress: 60, icon: <FiMoon /> },
+  { title: "Morning Breath", body: "Take 5 slow breaths before work starts. It helps settle your heart rate.", icon: <FiSun /> },
+  { title: "Hydration Tip", body: "Finish one glass of water before lunch so fatigue and headache stay lower.", icon: <FiActivity /> },
+  { title: "Evening Unwind", body: "Keep lights low 30 mins before sleep and let your mind slow down naturally.", icon: <FiMoon /> },
 ]
 
 const breathingSteps = [
@@ -61,15 +51,17 @@ const breathingSteps = [
   { label: "Hold", seconds: 4 },
   { label: "Exhale", seconds: 4 },
 ]
+
 const SLEEP_RECORDINGS_KEY = "employee_sleep_recordings_v1"
 
 export default function StressRelief() {
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>(null)
-  const [draft, setDraft] = useState("")
-  const [lastSent, setLastSent] = useState("")
   const [breathingStep, setBreathingStep] = useState(0)
   const [breathingCount, setBreathingCount] = useState(breathingSteps[0].seconds)
+  const [stressSummary, setStressSummary] = useState<StressSummary | null>(null)
+  const [stressEntries, setStressEntries] = useState<StressEntry[]>([])
+  const [loadingStress, setLoadingStress] = useState(true)
   const [sleepRecords, setSleepRecords] = useState<SleepRecording[]>(() => {
     const raw = localStorage.getItem(SLEEP_RECORDINGS_KEY)
     if (!raw) return []
@@ -82,40 +74,70 @@ export default function StressRelief() {
   })
   const [isRecording, setIsRecording] = useState(false)
   const [sleepSound, setSleepSound] = useState("Rain")
-  const [isListening, setIsListening] = useState(false)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const recordChunksRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
-  const speechRef = useRef<SpeechRecognitionInstance | null>(null)
 
-  const calmScore = useMemo(() => 78, [])
+  const calmScore = useMemo(() => stressSummary?.calmScore ?? null, [stressSummary])
   const isNight = useMemo(() => {
     const hour = new Date().getHours()
     return hour >= 21 || hour < 6
   }, [])
 
-  function triggerActivity(item: ActivityItem) {
+  async function loadStressState() {
+    try {
+      setLoadingStress(true)
+      const response = await getStressHistory(undefined, 12)
+      setStressEntries(response.entries ?? [])
+      setStressSummary(response.summary ?? null)
+    } catch {
+      setStressEntries([])
+      setStressSummary(null)
+    } finally {
+      setLoadingStress(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadStressState()
+  }, [])
+
+  async function logActivity(activityType: StressActivityType, durationMinutes: number, notes: string, meta?: Record<string, unknown>) {
+    try {
+      await saveStressEntry({ activityType, durationMinutes, notes, meta })
+      await loadStressState()
+    } catch {
+      // keep page usable even if backend logging fails
+    }
+  }
+
+  async function triggerActivity(item: ActivityItem) {
+    armAudioContext()
     if (item.id === "reset") {
-      navigate("/ai-chat", { state: { prefill: "I need a mood reset. Help me calm down." } })
+      startAmbientTrack("meditation")
+      await logActivity("mood-reset", 5, "Opened mood reset support", { source: "stress-relief" })
+      navigate("/ai-chat", {
+        state: {
+          doctor: {
+            name: "Dr. Meera Sethi",
+            avatar: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=320&q=80",
+          },
+          feelingId: "mood-reset",
+          theme: "whatsapp-calm",
+        },
+      })
       return
     }
     if (item.id === "meditation") {
+      startAmbientTrack("meditation")
+      await logActivity("meditation", 10, "Opened meditation tracker", { source: "stress-relief" })
       navigate("/meditation")
       return
     }
     if (item.action) {
+      startAmbientTrack(item.action === "breathing" ? "breathing" : "rain")
       setMode(item.action)
-      return
     }
-    setLastSent(`${item.title} started. Nice choice.`)
-  }
-
-  function onSend() {
-    const text = draft.trim()
-    if (!text) return
-    setLastSent(text)
-    setDraft("")
-    navigate("/ai-chat", { state: { prefill: text } })
   }
 
   function persistSleepRecords(next: SleepRecording[]) {
@@ -163,6 +185,7 @@ export default function StressRelief() {
           persistSleepRecords(updated)
         }
         reader.readAsDataURL(blob)
+        void logActivity("sleep", 30, "Sleep sound captured", { sound: sleepSound, recorded: true })
         stream.getTracks().forEach((track) => track.stop())
         streamRef.current = null
       }
@@ -183,6 +206,7 @@ export default function StressRelief() {
 
   useEffect(() => {
     if (mode !== "breathing") return
+    startAmbientTrack("breathing")
     setBreathingStep(0)
     setBreathingCount(breathingSteps[0].seconds)
     const interval = window.setInterval(() => {
@@ -203,10 +227,7 @@ export default function StressRelief() {
 
   useEffect(() => {
     return () => {
-      if (speechRef.current) {
-        speechRef.current.stop()
-        speechRef.current = null
-      }
+      stopAmbientTrack()
       if (recorderRef.current) {
         recorderRef.current.stop()
         recorderRef.current = null
@@ -218,44 +239,6 @@ export default function StressRelief() {
     }
   }, [])
 
-  function stopVoiceToText() {
-    if (speechRef.current) {
-      speechRef.current.stop()
-      speechRef.current = null
-    }
-    setIsListening(false)
-  }
-
-  function startVoiceToText() {
-    const Recognition = (window as typeof window & {
-      SpeechRecognition?: new () => SpeechRecognitionInstance
-      webkitSpeechRecognition?: new () => SpeechRecognitionInstance
-    }).SpeechRecognition || (window as typeof window & { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition
-
-    if (!Recognition) {
-      setLastSent("Voice input is not supported on this device.")
-      return
-    }
-
-    const recognition = new Recognition()
-    recognition.lang = "en-IN"
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || ""
-      if (transcript) {
-        setDraft(transcript)
-        navigate("/ai-chat", { state: { prefill: transcript } })
-      }
-      setIsListening(false)
-    }
-    recognition.onerror = () => stopVoiceToText()
-    recognition.onend = () => stopVoiceToText()
-    speechRef.current = recognition
-    setIsListening(true)
-    recognition.start()
-  }
-
   return (
     <div className="stress-page app-page-enter">
       <header className="stress-header app-fade-stagger">
@@ -264,33 +247,35 @@ export default function StressRelief() {
         </button>
         <div className="stress-header-copy">
           <h1 className="stress-title">Stress Relief</h1>
-          <p className="stress-subtitle">Your safe space to unwind</p>
+          <p className="stress-subtitle">Everyday relief that tracks what you actually do</p>
         </div>
       </header>
 
       <div className="stress-content app-content-slide">
-        <section className="calm-hero app-fade-stagger">
-          <div className="calm-hero-copy">
-            <p>Today&apos;s Calm Score</p>
-            <h2>{calmScore}<span>/100</span></h2>
-            <div className="mood-chips">
-              <span><FiSmile /> Stable</span>
-              <span><FiZap /> Light stress</span>
+        {!loadingStress && calmScore !== null && (
+          <section className="calm-hero app-fade-stagger">
+            <div className="calm-hero-copy">
+              <p>Today&apos;s Calm Score</p>
+              <h2>{calmScore}<span>/100</span></h2>
+              <div className="mood-chips">
+                <span><FiSmile /> {stressSummary?.averageMood ? `Mood ${stressSummary.averageMood}/10` : "Tracked"}</span>
+                <span><FiZap /> {stressSummary?.totalMinutes ?? 0} mins logged</span>
+              </div>
             </div>
-          </div>
-          <div className="calm-illustration" aria-hidden="true">
-            <div className="orb orb-a" />
-            <div className="orb orb-b" />
-            <div className="wave wave-a" />
-            <div className="wave wave-b" />
-          </div>
-        </section>
+            <div className="calm-illustration" aria-hidden="true">
+              <div className="orb orb-a" />
+              <div className="orb orb-b" />
+              <div className="wave wave-a" />
+              <div className="wave wave-b" />
+            </div>
+          </section>
+        )}
 
         <section className="stress-section app-fade-stagger">
-          <h3 className="stress-section-title">Quick Relief Activities</h3>
+          <h3 className="stress-section-title">Everyday Relief</h3>
           <div className="activities">
             {activityItems.map((item) => (
-              <button key={item.id} className={`activity-card ${item.tone} app-pressable`} type="button" onClick={() => triggerActivity(item)}>
+              <button key={item.id} className={`activity-card ${item.tone} app-pressable`} type="button" onClick={() => void triggerActivity(item)}>
                 <span className="activity-icon">{item.icon}</span>
                 <h4>{item.title}</h4>
                 <p>{item.subtitle}</p>
@@ -308,74 +293,100 @@ export default function StressRelief() {
                   <span>{ritual.icon}</span>
                   <strong>{ritual.title}</strong>
                 </div>
-                <div className="ritual-track"><span style={{ width: `${ritual.progress}%` }} /></div>
+                <p>{ritual.body}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="chat-area app-fade-stagger">
-          <div className="chat-bubble">
-            Hello. I am your stress relief companion. Share your feelings or thoughts. I am here to listen.
-            <div className="time">Live support</div>
+        <section className="stress-section app-fade-stagger">
+          <h3 className="stress-section-title">Recent Relief Activity</h3>
+          <div className="ritual-grid">
+            {stressEntries.length > 0 ? (
+              stressEntries.slice(0, 4).map((entry) => (
+                <article className="ritual-card" key={entry.id}>
+                  <div className="ritual-head">
+                    <span>
+                      {entry.activityType === "sleep" ? <FiMoon /> : entry.activityType === "meditation" ? <FiHeart /> : entry.activityType === "breathing" ? <FiWind /> : <FiSmile />}
+                    </span>
+                    <strong>{entry.activityType.replace("-", " ")}</strong>
+                  </div>
+                  <p>
+                    {entry.durationMinutes} mins •{" "}
+                    {new Date(entry.eventAt).toLocaleString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </article>
+              ))
+            ) : (
+              <article className="ritual-card">
+                <div className="ritual-head">
+                  <span><FiActivity /></span>
+                  <strong>No relief activity yet</strong>
+                </div>
+                <p>Start with breathing, meditation, sleep sounds, or a mood reset and we&apos;ll track it here.</p>
+              </article>
+            )}
           </div>
-          {lastSent && <div className="chat-bubble user">{lastSent}</div>}
         </section>
       </div>
 
-      <div className="stress-input">
-        <button className="input-icon app-pressable" type="button" aria-label="Voice input" onClick={startVoiceToText}>
-          <FiMic />
-        </button>
-        <input placeholder="Share your feelings..." value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onSend()} />
-        <button className="send-btn app-pressable" type="button" aria-label="Send" onClick={onSend}><FiSend /></button>
-      </div>
-
-      {isListening && (
-        <div className="voice-overlay" onClick={stopVoiceToText}>
-          <div className="voice-sheet app-page-enter" onClick={(e) => e.stopPropagation()}>
-            <h4>Listening...</h4>
-            <p>Speak your feelings. We’ll take you to AI chat right after.</p>
-            <div className="voice-bars" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
-            <button className="stop-voice app-pressable" onClick={stopVoiceToText} type="button">Stop</button>
-          </div>
-        </div>
-      )}
-
       {mode === "breathing" && (
-        <div className="overlay" onClick={() => setMode(null)}>
-          <div className="breath-wrap">
-            <div className="breath-ring ring-1" />
-            <div className="breath-ring ring-2" />
-            <div className="breath-circle" />
+        <div className="overlay" onClick={() => { stopAmbientTrack(); setMode(null) }}>
+          <div className="sleep-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="breath-wrap">
+              <div className="breath-ring ring-1" />
+              <div className="breath-ring ring-2" />
+              <div className="breath-circle" />
+            </div>
+            <p className="overlay-title">Breathing Exercise</p>
+            <p className="overlay-sub">{breathingSteps[breathingStep].label} • {breathingCount}s</p>
+            <p className="overlay-sub">Inhale for 4s, hold for 4s, exhale for 4s</p>
+            <div className="sleep-record stress-inline-actions">
+              <button
+                type="button"
+                className="sleep-record-btn app-pressable"
+                onClick={async () => {
+                  await logActivity("breathing", 2, "Completed guided breathing cycle", { cycle: "4-4-4" })
+                  stopAmbientTrack()
+                  setMode(null)
+                }}
+              >
+                Save Session
+              </button>
+            </div>
           </div>
-          <p className="overlay-title">Breathing Exercise</p>
-          <p className="overlay-sub">{breathingSteps[breathingStep].label} • {breathingCount}s</p>
-          <p className="overlay-sub">Inhale for 4s, hold for 4s, exhale for 4s</p>
         </div>
       )}
 
       {mode === "sleep" && (
-        <div className="overlay" onClick={() => setMode(null)}>
+        <div className="overlay" onClick={() => { stopAmbientTrack(); setMode(null) }}>
           <div className="sleep-sheet" onClick={(e) => e.stopPropagation()}>
             <p className="overlay-title">Sleep Sounds</p>
             <p className="overlay-sub">Choose a calming soundscape</p>
             <div className="sleep-tags">
               {["Rain", "Ocean", "Forest"].map((tag) => (
-                <button key={tag} type="button" className={`sleep-tag ${sleepSound === tag ? "active" : ""}`} onClick={() => setSleepSound(tag)}>
+                <button
+                  key={tag}
+                  type="button"
+                  className={`sleep-tag ${sleepSound === tag ? "active" : ""}`}
+                  onClick={() => {
+                    setSleepSound(tag)
+                    startAmbientTrack(tag.toLowerCase() as "rain" | "ocean" | "forest")
+                  }}
+                >
                   {tag}
                 </button>
               ))}
             </div>
-            <audio controls autoPlay loop>
-              <source src={`/sounds/${sleepSound.toLowerCase()}.mp3`} type="audio/mpeg" />
-            </audio>
+            <div className="sleep-audio-card">
+              <strong>{sleepSound} ambience playing</strong>
+              <p>Keep this sheet open and let the calming layer run in the background.</p>
+            </div>
 
             <div className="sleep-record">
               <div>
@@ -388,7 +399,7 @@ export default function StressRelief() {
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={!isNight}
               >
-                {isRecording ? <FiSquare /> : <FiMic />}
+                {isRecording ? <FiSquare /> : <FiMoon />}
                 {isRecording ? "Stop" : "Record"}
               </button>
             </div>
@@ -410,4 +421,3 @@ export default function StressRelief() {
     </div>
   )
 }
-

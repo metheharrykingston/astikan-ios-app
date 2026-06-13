@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "201357365434",
+    "project_id": "astikan-healthcare-83920",
+    "storage_bucket": "astikan-healthcare-83920.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:201357365434:android:766d503643de1a98eaf283",
+        "android_client_info": {
+          "package_name": "com.astikan.healthcare"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "201357365434-65sskla5ehcbp9s8odutvbouf8m90udl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.astikan.healthcare",
+            "certificate_hash": "e9d364ae25d97fc67b19d496501946e0a4c0b349"
+          }
+        },
+        {
+          "client_id": "201357365434-7l995asthm48875nsc4opfj97cffuik6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.astikan.healthcare",
+            "certificate_hash": "d9b9a47482ce8894ef26c37b2299e08d4b54919b"
+          }
+        },
+        {
+          "client_id": "201357365434-hs9pa566on289sc5dogjgfjn9eocl4p3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.astikan.healthcare",
+            "certificate_hash": "1dec08e603f9a1d3ab31cfe4966f3bf2bee09c4d"
+          }
+        },
+        {
+          "client_id": "201357365434-es9hpri4pi3c3s2t28oek2918qkdcgpq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEHyexeIVX5rpUT3GielsSD1eLa36J8zI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "201357365434-9799oqoi12fj4okr1ggkvc1jghv6ebhc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

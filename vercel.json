@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://astikan-backend-production.up.railway.app/api/$1"
-    }
-  ]
-}

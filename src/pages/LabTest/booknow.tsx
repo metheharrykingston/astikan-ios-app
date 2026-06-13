@@ -1,6 +1,6 @@
 ﻿import { FiArrowLeft, FiClock, FiFileText, FiMapPin } from "react-icons/fi"
 import { RiTestTubeLine } from "react-icons/ri"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -35,8 +35,6 @@ export default function LabBookNowStep3() {
     typeof mapboxTokenRaw === "string" && mapboxTokenRaw.trim() && mapboxTokenRaw !== "undefined" && mapboxTokenRaw !== "null"
       ? mapboxTokenRaw
       : ""
-  const [etaMinutes, setEtaMinutes] = useState<number | null>(null)
-  const [displayEta, setDisplayEta] = useState<number | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const originMarkerRef = useRef<mapboxgl.Marker | null>(null)
@@ -63,14 +61,6 @@ export default function LabBookNowStep3() {
   const now = new Date()
   const bookingDate = now.toISOString().slice(0, 10)
   const bookingTime = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-
-  function formatDuration(minutes: number | null) {
-    if (!minutes || minutes <= 0) return "ETA"
-    const hrs = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    if (hrs > 0) return `${hrs} hr ${mins} min`
-    return `${mins} min`
-  }
 
   async function geocodeAddress(query: string, signal?: AbortSignal) {
     if (!query.trim()) return null
@@ -249,9 +239,6 @@ export default function LabBookNowStep3() {
         bounds.extend([destination.lon, destination.lat])
         map.fitBounds(bounds, { padding: 60, maxZoom: 14 })
 
-        if (typeof route.duration === "number") {
-          setEtaMinutes(Math.max(1, Math.round(route.duration / 60)))
-        }
       } catch (error) {
         console.error("Mapbox route error", error)
       }
@@ -264,19 +251,6 @@ export default function LabBookNowStep3() {
       if (interval) window.clearInterval(interval)
     }
   }, [NIRAMAYA_DELHI_ADDRESS, canRenderMap, mapboxToken, addressValue])
-
-  useEffect(() => {
-    if (!etaMinutes) return
-    const start = Math.max(1, Math.round(etaMinutes / 2))
-    setDisplayEta(start)
-    const interval = window.setInterval(() => {
-      setDisplayEta((prev) => {
-        if (!prev || prev <= 1) return 1
-        return prev - 1
-      })
-    }, 10000)
-    return () => window.clearInterval(interval)
-  }, [etaMinutes])
 
   return (
     <div className="lab-page">
@@ -291,21 +265,19 @@ export default function LabBookNowStep3() {
       </div>
 
       <div className="lab-steps">
-        <div className="step done">1. Tests</div>
+        <div className="step done">1. Readiness</div>
         <span>-</span>
         <div className="step done">2. Location</div>
         <span>-</span>
-        <div className="step active">3. Schedule</div>
-        <span>-</span>
-        <div className="step pending">4. Confirm</div>
+        <div className="step active">3. Confirm</div>
       </div>
 
       <div className="status-block">
         <div className="status-round">
           <RiTestTubeLine />
         </div>
-        <h2>{displayEta ? `${formatDuration(displayEta)} away !` : "Calculating ETA"}</h2>
-        <p>Your lab test is just a few distance away</p>
+        <h2>Ready for collection</h2>
+        <p>Your selected lab partner is ready to collect your sample.</p>
       </div>
 
       <div className="lab-test-card static-card" role="presentation">
@@ -315,7 +287,7 @@ export default function LabBookNowStep3() {
           <p>{test.desc}</p>
           <div className="lab-meta-row">
             <span className="pill">{test.tag}</span>
-            <span><FiClock /> 15 mins test</span>
+            <span><FiClock /> Collection-ready slot</span>
           </div>
           <div className="lab-meta-row muted">
             <span><FiFileText /> {test.fasting}</span>
@@ -332,24 +304,7 @@ export default function LabBookNowStep3() {
         <FiMapPin /> Address : {addressLabel}
       </div>
 
-      <div className="bottom-buttons two">
-        <button
-          className="btn-secondary"
-          onClick={() =>
-            navigate("/lab-tests/schedule", {
-              state: {
-                selectedTest: test,
-                collectionType: state?.collectionType,
-                address: state?.address,
-                readinessQuestions: state?.readinessQuestions,
-                readiness: state?.readiness,
-              },
-            })
-          }
-          type="button"
-        >
-          Schedule Later
-        </button>
+      <div className="bottom-buttons single">
         <button
           className="btn-primary"
           onClick={() =>
@@ -360,8 +315,8 @@ export default function LabBookNowStep3() {
                 address: state?.address,
                 date: bookingDate,
                 time: bookingTime,
-                etaMinutes: displayEta ?? etaMinutes ?? 15,
-                etaStartAt: new Date().toISOString(),
+                etaMinutes: null,
+                etaStartAt: null,
                 readinessQuestions: state?.readinessQuestions,
                 readiness: state?.readiness,
               },
@@ -369,10 +324,9 @@ export default function LabBookNowStep3() {
           }
           type="button"
         >
-          Book Now
+          Continue to Payment
         </button>
       </div>
     </div>
   )
 }
-

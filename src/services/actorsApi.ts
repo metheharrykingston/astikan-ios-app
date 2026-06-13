@@ -1,36 +1,59 @@
 import { apiPost } from './api'
 
-type EmployeeBootstrapResponse = {
-  companyId: string
-  employeeUserId: string
-  employeeCode: string
-  email: string
-}
-
-const EMPLOYEE_ACTOR_KEY = 'astikan_employee_actor'
-
-export async function ensureEmployeeActor(input: {
+export async function ensureUserActor(input: {
   companyReference?: string
   companyName?: string
   email?: string
   phone?: string
   fullName?: string
   handle?: string
+  userCode?: string
   employeeCode?: string
 }) {
-  const raw = localStorage.getItem(EMPLOYEE_ACTOR_KEY)
-  if (raw) {
+  const payload: any = input ?? {}
+
+  const readStored = (key: string): any => {
     try {
-      return JSON.parse(raw) as EmployeeBootstrapResponse
+      const raw = localStorage.getItem(key) || sessionStorage.getItem(key)
+      return raw ? JSON.parse(raw) : null
     } catch {
-      localStorage.removeItem(EMPLOYEE_ACTOR_KEY)
+      return null
     }
   }
 
-  const actor = await apiPost<EmployeeBootstrapResponse, typeof input>('/employees/bootstrap', input)
-  localStorage.setItem(EMPLOYEE_ACTOR_KEY, JSON.stringify(actor))
-  return actor
+  const auth = readStored("astikan_user_auth")
+  const company = readStored("astikan_user_company")
+
+  const userId = String(
+    auth?.userId ??
+    auth?.id ??
+    auth?.employeeId ??
+    auth?.user?.id ??
+    payload.userId ??
+    payload.employeeId ??
+    ""
+  ).trim()
+
+  const companyId = String(
+    payload.companyReference ??
+    payload.companyId ??
+    company?.companyId ??
+    auth?.companyId ??
+    "astikan-demo-company"
+  ).trim()
+
+  return {
+    companyId,
+    userId,
+    userCode: String(auth?.userCode ?? auth?.user_code ?? "").trim(),
+    employeeUserId: userId,
+    employeeCode: String(auth?.employeeCode ?? auth?.employee_code ?? "").trim(),
+    email: String(payload.email ?? auth?.email ?? "").trim(),
+    phone: String(payload.phone ?? auth?.phone ?? "").trim(),
+  } as any
 }
+
+export const ensureEmployeeActor = ensureUserActor
 
 export async function ensureDoctorActor(input: {
   email?: string

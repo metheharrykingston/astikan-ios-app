@@ -13,6 +13,7 @@ import {
   FiWind,
 } from "react-icons/fi"
 import { useNavigate } from "react-router-dom"
+import { fetchRecentSymptoms, saveRecentSymptom } from "../../services/symptomHistoryApi"
 import { fetchWeather, type WeatherSnapshot } from "../../services/weatherApi"
 import { goBackOrFallback } from "../../utils/navigation"
 import "./ai-symptom-analyser.css"
@@ -80,6 +81,7 @@ export default function AISymptomAnalyser() {
   const navigate = useNavigate()
   const [query, setQuery] = useState("")
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null)
+  const [recentSymptoms, setRecentSymptoms] = useState<string[]>([])
 
   useEffect(() => {
     const raw = localStorage.getItem("employee_geo")
@@ -90,6 +92,19 @@ export default function AISymptomAnalyser() {
       fetchWeather(parsed.lat, parsed.lon).then(setWeather).catch(() => setWeather(null))
     } catch {
       setWeather(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void fetchRecentSymptoms(9)
+      .then((data) => {
+        if (!active) return
+        setRecentSymptoms((data.symptoms ?? []).map((item) => item.label).filter(Boolean))
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
     }
   }, [])
 
@@ -123,10 +138,23 @@ export default function AISymptomAnalyser() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return smartSymptoms
-    return smartSymptoms.filter((item) => item.label.toLowerCase().includes(q))
+    const exact = smartSymptoms.filter((item) => item.label.toLowerCase().includes(q))
+    if (exact.length) return exact
+    return [
+      {
+        id: `custom-${q.replace(/\s+/g, "-")}`,
+        label: query.trim(),
+        icon: <FiSearch />,
+      },
+    ]
   }, [query, smartSymptoms])
 
-  function selectSymptom(symptom: string) {
+  async function selectSymptom(symptom: string) {
+    void saveRecentSymptom(symptom)
+      .then(() => {
+        setRecentSymptoms((prev) => [symptom, ...prev.filter((item) => item.toLowerCase() !== symptom.toLowerCase())].slice(0, 9))
+      })
+      .catch(() => undefined)
     const specialty = inferSpecialty(symptom)
     navigate("/teleconsultation", {
       state: {
@@ -169,13 +197,34 @@ export default function AISymptomAnalyser() {
             />
           </div>
 
+          {recentSymptoms.length > 0 ? (
+            <section className="recent-symptoms-block">
+              <div className="recent-symptoms-head">
+                <h3>Recent symptoms</h3>
+                <p>Tap once to reuse what you searched earlier.</p>
+              </div>
+              <div className="recent-symptoms-list">
+                {recentSymptoms.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className="recent-symptom-chip app-pressable"
+                    onClick={() => void selectSymptom(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <div className="flow-option-grid symptom-grid">
             {filtered.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 className="flow-option symptom-card app-pressable"
-                onClick={() => selectSymptom(item.label)}
+                onClick={() => void selectSymptom(item.label)}
               >
                 <span className="symptom-icon">{item.icon}</span>
                 <span className="symptom-label">{item.label}</span>

@@ -27,29 +27,29 @@ type HealthAssessmentCampaign = {
   description: string
   startDate: string
   endDate: string
-  targetCorporates: string
+  audience: string
   status: CampaignStatus
   tasks: AssessmentTask[]
   createdBy: string
 }
 
-type EmployeeAssessmentProgress = {
+type UserAssessmentProgress = {
   completedTaskIds: string[]
   pointsEarned: number
   answers: Record<string, number>
 }
 
 const CAMPAIGN_STORAGE_KEY = "astikan_health_assessment_campaigns_v1"
-const PROGRESS_STORAGE_KEY = "astikan_employee_assessment_progress_v1"
+const PROGRESS_STORAGE_KEY = "astikan_user_assessment_progress_v1"
 
 const fallbackCampaigns: HealthAssessmentCampaign[] = [
   {
     id: "camp-1001",
     title: "Heart Smart Week",
-    description: "Corporate wellness knowledge sprint around cardiac health and emergency response.",
+    description: "Wellness knowledge sprint around cardiac health and emergency response.",
     startDate: "2026-03-08",
     endDate: "2026-03-14",
-    targetCorporates: "All enrolled corporates",
+    audience: "All Astikan users",
     status: "Open Enrollment",
     createdBy: "Super Admin",
     tasks: [
@@ -82,11 +82,11 @@ function loadCampaigns() {
   }
 }
 
-function loadProgress(): EmployeeAssessmentProgress {
+function loadProgress(): UserAssessmentProgress {
   try {
     const raw = window.localStorage.getItem(PROGRESS_STORAGE_KEY)
     if (!raw) return { completedTaskIds: [], pointsEarned: 0, answers: {} }
-    return JSON.parse(raw) as EmployeeAssessmentProgress
+    return JSON.parse(raw) as UserAssessmentProgress
   } catch {
     return { completedTaskIds: [], pointsEarned: 0, answers: {} }
   }
@@ -95,7 +95,7 @@ function loadProgress(): EmployeeAssessmentProgress {
 export default function HealthAssessments() {
   const navigate = useNavigate()
   const [campaigns] = useState<HealthAssessmentCampaign[]>(loadCampaigns())
-  const [progress, setProgress] = useState<EmployeeAssessmentProgress>(loadProgress())
+  const [progress, setProgress] = useState<UserAssessmentProgress>(loadProgress())
   const [selectedCampaignId, setSelectedCampaignId] = useState(campaigns[0]?.id ?? "")
 
   const liveCampaigns = useMemo(
@@ -114,7 +114,7 @@ export default function HealthAssessments() {
     ? selectedCampaign.tasks.filter((task) => progress.completedTaskIds.includes(task.id)).length
     : 0
 
-  function updateProgress(next: EmployeeAssessmentProgress) {
+  function updateProgress(next: UserAssessmentProgress) {
     setProgress(next)
     window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(next))
   }
@@ -150,7 +150,7 @@ export default function HealthAssessments() {
         </button>
         <div>
           <h1>Health Assessment Campaigns</h1>
-          <p>Super-admin campaigns for corporate employees. Complete tasks and earn points.</p>
+          <p>Astikan wellness campaigns for users. Complete tasks and earn points.</p>
         </div>
       </header>
 
@@ -183,7 +183,7 @@ export default function HealthAssessments() {
                 >
                   <strong>{campaign.title}</strong>
                   <small>{campaign.startDate} to {campaign.endDate}</small>
-                  <span>{campaign.targetCorporates}</span>
+                  <span>{campaign.audience}</span>
                 </button>
               ))}
             </div>

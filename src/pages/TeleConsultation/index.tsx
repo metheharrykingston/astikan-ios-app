@@ -3,18 +3,27 @@ import {
   FiActivity,
   FiArrowUpRight,
   FiArrowLeft,
+  FiCalendar,
+  FiCheckCircle,
   FiClock,
   FiDroplet,
-  FiCheckCircle,
   FiHeart,
   FiMapPin,
-  FiShield,
   FiSearch,
+  FiShield,
   FiStar,
+  FiUser,
   FiVideo,
+  FiVideoOff,
+  FiMic,
+  FiMicOff,
+  FiVolume2,
+  FiVolumeX,
+  FiPhoneOff,
 } from "react-icons/fi"
 import type { ReactElement } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
+import { consumeVoiceAutomation, subscribeVoiceAutomation } from "../../app/voiceAutomation"
 import { goBackOrFallback } from "../../utils/navigation"
 import { armAudioContext, playAppSound } from "../../utils/sound"
 import { ensureEmployeeActor } from "../../services/actorsApi"
@@ -22,7 +31,9 @@ import { createAppointment } from "../../services/appointmentsApi"
 import { getEmployeeCompanySession } from "../../services/authApi"
 import { fetchDoctors as fetchDoctorDirectory, type DirectoryDoctor } from "../../services/doctorsApi"
 import { createTeleconsultSession, joinTeleconsultSession } from "../../services/teleconsultApi"
+import { consumeTeleconsultPaidAccess } from "../../services/teleconsultPaidApi"
 import { addNotification } from "../../services/notificationCenter"
+import { getAuthToken } from "../../services/api"
 import "./teleconsultation.css"
 
 type Doctor = {
@@ -43,6 +54,11 @@ type Doctor = {
 type JourneyStep = "options" | "ride" | "video"
 type ConsultMode = "tele" | "opd"
 type CallState = "ready" | "connecting" | "live" | "ended" | "failed"
+type FeelingDoctor = {
+  name: string
+  avatar: string
+  phone?: string
+}
 type TeleNavState = {
   fromAiAnalyser?: boolean
   preselectedSpecialty?: Doctor["specialty"]
@@ -56,6 +72,10 @@ type TeleNavState = {
   startRide?: boolean
   startVideo?: boolean
   autoJoin?: boolean
+  prepaidAccess?: boolean
+  paidAccessFeelingId?: string
+  sessionDurationMinutes?: number
+  featuredDoctor?: FeelingDoctor
 }
 
 type TeleBooking = {
@@ -68,6 +88,8 @@ type TeleBooking = {
   status?: string
   scheduledAt: string
   joinWindowStart: string
+  durationMinutes?: number
+  mode?: "tele" | "opd"
 }
 
 const TELE_BOOKINGS_KEY = "teleconsult_bookings"
@@ -154,10 +176,10 @@ const DEMO_DOCTORS: Array<{
     fee: 33,
   },
 ]
-const MAX_TELECONSULT_SECONDS = 30 * 60
 const MAX_JOIN_RETRIES = 3
 const JOIN_RETRY_DELAY_MS = 1200
 const DEFAULT_COMPANY_ID = "astikan-demo-company"
+const TELE_FREE_OFFER_KEY = "teleconsult_free_offer"
 
 
 function resolveAvatarUrl(avatar: string | null | undefined, fallback: string) {
@@ -171,6 +193,25 @@ function resolveAvatarUrl(avatar: string | null | undefined, fallback: string) {
     return trimmed
   }
   return `/assets/${trimmed.replace(/^assets\//, "")}`
+}
+
+function handleDoctorAvatarError(event: React.SyntheticEvent<HTMLImageElement>, fallback: string) {
+  const img = event.currentTarget
+  if (img.dataset.fallbackTried === "true") {
+    img.style.display = "none"
+    return
+  }
+  img.dataset.fallbackTried = "true"
+  if (fallback && img.src !== fallback) {
+    img.src = fallback
+    return
+  }
+  img.style.display = "none"
+}
+
+function isDoctorFreeForCurrentFlow(doctor: Doctor | null, mode: ConsultMode, teleOfferActive: boolean) {
+  if (!doctor) return false
+  return teleOfferActive && mode === "tele" && doctor.specialty === "Internal Medicine"
 }
 
 function getEmployeeRtcId() {
@@ -232,6 +273,10 @@ export default function TeleConsultation() {
   const [callState, setCallState] = useState<CallState>("ready")
   const [callError, setCallError] = useState("")
   const [mediaError, setMediaError] = useState("")
+  const [micOn, setMicOn] = useState(true)
+  const [cameraOn, setCameraOn] = useState(true)
+  const [speakerOn, setSpeakerOn] = useState(true)
+  const [remoteJoined, setRemoteJoined] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [showDoctors, setShowDoctors] = useState(false)
   const [isBookingNow, setIsBookingNow] = useState(false)
@@ -245,6 +290,10 @@ export default function TeleConsultation() {
   const [doctorOffset, setDoctorOffset] = useState(0)
   const [doctorHasMore, setDoctorHasMore] = useState(true)
   const [doctorLoading, setDoctorLoading] = useState(false)
+  const [teleOfferActive, setTeleOfferActive] = useState(false)
+  const prepaidConsultActive = Boolean(incomingState?.prepaidAccess)
+  const consultDurationMinutes = prepaidConsultActive ? Math.max(5, Number(incomingState?.sessionDurationMinutes ?? 15) || 15) : 30
+  const maxTeleconsultSeconds = consultDurationMinutes * 60
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -254,8 +303,11 @@ export default function TeleConsultation() {
   const connectTimerRef = useRef<number | null>(null)
   const callClockRef = useRef<number | null>(null)
   const callExitHandledRef = useRef(false)
+  const pendingVoiceBookRef = useRef<{ doctorId?: string; mode?: "tele" | "opd" } | null>(null)
 
   const selectedDoctorInfo = doctors.find((doctor) => doctor.id === selectedDoctor) ?? null
+  const selectedDoctorIsFree = isDoctorFreeForCurrentFlow(selectedDoctorInfo, mode, teleOfferActive)
+  const selectedDoctorRequiresPayment = Boolean(selectedDoctorInfo) && !prepaidConsultActive && !selectedDoctorIsFree && (selectedDoctorInfo?.fee ?? 0) > 0
   const effectiveStep: JourneyStep = step === "video" && !selectedDoctorInfo ? "options" : step
   const joinWindowStart = useMemo(() => {
     if (!scheduledAt) return null
@@ -355,6 +407,21 @@ export default function TeleConsultation() {
   }, [])
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(TELE_FREE_OFFER_KEY)
+      if (!raw) {
+        setTeleOfferActive(false)
+        return
+      }
+      const parsed = JSON.parse(raw) as { active?: boolean; activeUntil?: string | null }
+      const isActiveByDate = parsed.activeUntil ? Date.parse(parsed.activeUntil) > Date.now() : false
+      setTeleOfferActive(Boolean(parsed.active || isActiveByDate))
+    } catch {
+      setTeleOfferActive(false)
+    }
+  }, [])
+
+  useEffect(() => {
     let active = true
     if (!loadMoreRef.current) return () => {}
     const observer = new IntersectionObserver(
@@ -397,25 +464,33 @@ export default function TeleConsultation() {
       const byText = !q || doctor.name.toLowerCase().includes(q) || doctor.specialty.toLowerCase().includes(q)
       return bySpecialty && byText
     })
-    if (filtered.length >= 2) return filtered
-    if (filtered.length > 0) return filtered
+    const prioritized = [...filtered].sort((a, b) => {
+      const aFree = teleOfferActive && mode === "tele" && a.specialty === "Internal Medicine" ? 1 : 0
+      const bFree = teleOfferActive && mode === "tele" && b.specialty === "Internal Medicine" ? 1 : 0
+      if (aFree !== bFree) return bFree - aFree
+      if (a.fee !== b.fee) return a.fee - b.fee
+      return b.rating - a.rating
+    })
+    if (prioritized.length >= 2) return prioritized
+    if (prioritized.length > 0) return prioritized
     return []
-  }, [doctors, activeSpecialty, query])
+  }, [doctors, activeSpecialty, query, teleOfferActive, mode])
 
   useEffect(() => {
     const state = location.state as TeleNavState | undefined
 
     if (!state) return
 
+    if (state.analysisQuery) setAnalysisQuery(state.analysisQuery)
+    if (Array.isArray(state.selectedSymptoms) && state.selectedSymptoms.length > 0) {
+      setSelectedSymptoms(state.selectedSymptoms)
+    }
+    if (state.preselectedSpecialty) {
+      setActiveSpecialty(state.preselectedSpecialty)
+    }
+    if (state.recommendedMode) setMode(state.recommendedMode)
+
     if (state.fromAiAnalyser) {
-      if (state.analysisQuery) setAnalysisQuery(state.analysisQuery)
-      if (Array.isArray(state.selectedSymptoms) && state.selectedSymptoms.length > 0) {
-        setSelectedSymptoms(state.selectedSymptoms)
-      }
-      if (state.preselectedSpecialty) {
-        setActiveSpecialty(state.preselectedSpecialty)
-      }
-      if (state.recommendedMode) setMode(state.recommendedMode)
       setStep("options")
     }
 
@@ -461,9 +536,43 @@ export default function TeleConsultation() {
   }, [selectedDoctor, visibleDoctors])
 
   useEffect(() => {
+    if (!prepaidConsultActive || !incomingState?.featuredDoctor?.name || doctors.length === 0 || selectedDoctor) return
+    const target = incomingState.featuredDoctor.name.toLowerCase()
+    const byName = doctors.find((doctor) => doctor.name.toLowerCase().includes(target))
+    if (byName) {
+      setSelectedDoctor(byName.id)
+    }
+  }, [doctors, incomingState, prepaidConsultActive, selectedDoctor])
+
+  useEffect(() => {
     if (!selectedDoctorInfo) return
     setBookingError("")
   }, [selectedDoctorInfo])
+
+  useEffect(() => {
+    function applyVoiceBookingCommand() {
+      const command = consumeVoiceAutomation("teleconsult-book")
+      if (!command) return
+      if (command.payload.doctorId) {
+        setSelectedDoctor(command.payload.doctorId)
+      }
+      if (command.payload.mode) {
+        setMode(command.payload.mode)
+      }
+      pendingVoiceBookRef.current = command.payload
+    }
+
+    applyVoiceBookingCommand()
+    return subscribeVoiceAutomation(applyVoiceBookingCommand)
+  }, [])
+
+  useEffect(() => {
+    if (!pendingVoiceBookRef.current || !selectedDoctorInfo || isBookingNow) return
+    if (pendingVoiceBookRef.current.doctorId && pendingVoiceBookRef.current.doctorId !== selectedDoctorInfo.id) return
+    if (pendingVoiceBookRef.current.mode && pendingVoiceBookRef.current.mode !== mode) return
+    pendingVoiceBookRef.current = null
+    void continueJourney()
+  }, [isBookingNow, mode, selectedDoctorInfo])
 
   useEffect(() => {
     if (step !== "video") return
@@ -523,8 +632,19 @@ export default function TeleConsultation() {
       setCallState("ready")
       setCallError("")
       setMediaError("")
+      setMicOn(true)
+      setCameraOn(true)
+      setSpeakerOn(true)
+      setRemoteJoined(false)
     }
   }, [step])
+
+  useEffect(() => {
+    const remoteVideo = remoteVideoRef.current
+    if (!remoteVideo) return
+    remoteVideo.muted = !speakerOn
+    remoteVideo.volume = speakerOn ? 1 : 0
+  }, [speakerOn, remoteJoined])
 
   useEffect(() => {
     if (step !== "video" || !joinWindowStart) {
@@ -596,7 +716,7 @@ export default function TeleConsultation() {
     const actors = await ensureTeleconsultActors(selectedDoctorRecord)
     const now = new Date()
     const start = now.toISOString()
-    const end = new Date(now.getTime() + 30 * 60 * 1000).toISOString()
+    const end = new Date(now.getTime() + consultDurationMinutes * 60 * 1000).toISOString()
     const appointment = await createAppointment({
       companyId: actors.employee.companyId,
       employeeId: actors.employee.employeeUserId,
@@ -626,6 +746,17 @@ export default function TeleConsultation() {
 
   async function continueJourney() {
     if (!selectedDoctorInfo) return
+    if (selectedDoctorRequiresPayment) {
+      navigate("/teleconsultation/schedule", {
+        state: {
+          doctor: selectedDoctorInfo,
+          mode,
+          analysisQuery,
+          selectedSymptoms,
+        },
+      })
+      return
+    }
     if (mode === "tele") {
       setIsBookingNow(true)
       setMediaError("")
@@ -635,7 +766,7 @@ export default function TeleConsultation() {
       try {
         const now = new Date()
         const start = new Date(now.getTime())
-        const end = new Date(start.getTime() + 30 * 60 * 1000)
+        const end = new Date(start.getTime() + consultDurationMinutes * 60 * 1000)
         const actors = await ensureTeleconsultActors(selectedDoctorInfo)
         const appointment = await createAppointment({
           companyId: actors.employee.companyId,
@@ -654,6 +785,13 @@ export default function TeleConsultation() {
           symptomSnapshot: { selectedSymptoms },
           aiTriageSummary: analysisQuery || undefined,
         })
+        if (prepaidConsultActive) {
+          await consumeTeleconsultPaidAccess({
+            appointmentId: appointment.appointmentId,
+            doctorId: selectedDoctorInfo.id,
+            feelingId: incomingState?.paidAccessFeelingId ?? null,
+          }).catch(() => undefined)
+        }
         const created = await createTeleconsultSession({
           companyId: actors.employee.companyId,
           employeeId: actors.employee.employeeUserId,
@@ -673,6 +811,8 @@ export default function TeleConsultation() {
           status: "confirmed",
           scheduledAt: start.toISOString(),
           joinWindowStart: new Date(start.getTime()).toISOString(),
+          durationMinutes: consultDurationMinutes,
+          mode: "tele",
         }
         const existing = JSON.parse(localStorage.getItem(TELE_BOOKINGS_KEY) || "[]") as TeleBooking[]
         localStorage.setItem(TELE_BOOKINGS_KEY, JSON.stringify([booking, ...existing].slice(0, 20)))
@@ -687,7 +827,10 @@ export default function TeleConsultation() {
           scheduledAt: booking.scheduledAt,
         })
       } catch (error) {
-        const message = error instanceof Error ? error.message : "We could not create your booking right now."
+        const rawMessage = error instanceof Error ? error.message : ""
+        const message = rawMessage.toLowerCase().includes("temporarily") || rawMessage.toLowerCase().includes("network")
+          ? "Booking service is taking longer than expected. Please retry once or schedule the appointment."
+          : rawMessage || "We could not create your booking right now."
         setBookingError(message)
         bookingFailed = true
       } finally {
@@ -703,7 +846,7 @@ export default function TeleConsultation() {
     try {
       const actors = await ensureTeleconsultActors(selectedDoctorInfo)
       const now = new Date()
-      await createAppointment({
+      const appointment = await createAppointment({
         companyId: actors.employee.companyId,
         employeeId: actors.employee.employeeUserId,
         doctorId: actors.doctor.userId,
@@ -711,13 +854,35 @@ export default function TeleConsultation() {
         appointmentType: "opd",
         source: "employee_booked",
         scheduledStart: now.toISOString(),
-        scheduledEnd: new Date(now.getTime() + 30 * 60 * 1000).toISOString(),
+        scheduledEnd: new Date(now.getTime() + consultDurationMinutes * 60 * 1000).toISOString(),
         status: "confirmed",
         reason: analysisQuery || selectedDoctorInfo.specialty,
         patientSummary: selectedSymptoms.join(", "),
         symptomSnapshot: { selectedSymptoms },
         aiTriageSummary: analysisQuery || undefined,
       })
+      navigate("/teleconsultation/confirm", {
+        state: {
+          booking: {
+            id: appointment.appointmentId,
+            sessionId: "",
+            doctorId: selectedDoctorInfo.id,
+            doctorName: selectedDoctorInfo.name,
+            specialty: selectedDoctorInfo.specialty,
+            doctorAvatar: selectedDoctorInfo.avatar,
+            status: "confirmed",
+            scheduledAt: now.toISOString(),
+            joinWindowStart: now.toISOString(),
+            durationMinutes: consultDurationMinutes,
+            mode: "opd",
+          },
+          nextPickup: true,
+          doctor: selectedDoctorInfo,
+          analysisQuery,
+          selectedSymptoms,
+        },
+      })
+      return
     } catch {
       // Keep OPD journey resilient even if appointment persistence is unavailable.
     }
@@ -745,11 +910,13 @@ export default function TeleConsultation() {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null
     }
+    setRemoteJoined(false)
   }
 
-  function buildWsUrl(sessionId: string, participantId: string, role: "employee" | "doctor") {
+  function buildWsUrl(sessionId: string, participantId: string, role: "user" | "doctor") {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws"
-    return `${protocol}://${window.location.host}/ws/teleconsult?sessionId=${sessionId}&participantId=${participantId}&role=${role}`
+    const params = new URLSearchParams({ sessionId, participantId, role, token: getAuthToken() })
+    return `${protocol}://${window.location.host}/ws/teleconsult?${params.toString()}`
   }
 
   function startLiveTimer() {
@@ -757,13 +924,13 @@ export default function TeleConsultation() {
     callClockRef.current = window.setInterval(() => {
       setElapsedSeconds((prev) => {
         const next = prev + 1
-          if (next >= MAX_TELECONSULT_SECONDS) {
+          if (next >= maxTeleconsultSeconds) {
             if (callClockRef.current) window.clearInterval(callClockRef.current)
             callClockRef.current = null
             setCallState("ended")
             teardownRealtimeCall()
             exitCallToPreviousScreen()
-            return MAX_TELECONSULT_SECONDS
+            return maxTeleconsultSeconds
           }
         return next
       })
@@ -802,10 +969,11 @@ export default function TeleConsultation() {
           if (remoteVideoRef.current && remoteStream) {
             remoteVideoRef.current.srcObject = remoteStream
             void remoteVideoRef.current.play().catch(() => undefined)
+            setRemoteJoined(true)
           }
         }
 
-        const ws = new WebSocket(buildWsUrl(sessionId, actors.employee.employeeUserId, "employee"))
+        const ws = new WebSocket(buildWsUrl(sessionId, actors.employee.employeeUserId, "user"))
         wsRef.current = ws
 
         ws.onmessage = async (message) => {
@@ -867,7 +1035,37 @@ export default function TeleConsultation() {
 
   const liveMinutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")
   const liveSeconds = String(elapsedSeconds % 60).padStart(2, "0")
-  const hasRemoteStream = Boolean(remoteVideoRef.current?.srcObject)
+  const hasRemoteStream = remoteJoined
+
+  function toggleMic() {
+    const stream = localStreamRef.current
+    if (!stream) return
+    const next = !micOn
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = next
+    })
+    setMicOn(next)
+  }
+
+  function toggleCamera() {
+    const stream = localStreamRef.current
+    if (!stream) return
+    const next = !cameraOn
+    stream.getVideoTracks().forEach((track) => {
+      track.enabled = next
+    })
+    setCameraOn(next)
+  }
+
+  function toggleSpeaker() {
+    setSpeakerOn((prev) => !prev)
+  }
+
+  function endCallNow() {
+    setCallState("ended")
+    teardownRealtimeCall()
+    exitCallToPreviousScreen()
+  }
 
   return (
     <main className="tele-page app-page-enter">
@@ -878,7 +1076,6 @@ export default function TeleConsultation() {
           </button>
           <div>
             <h1>Book Appointment</h1>
-            <p>Choose consultation type and get matched doctors</p>
           </div>
         </header>
       )}
@@ -895,7 +1092,6 @@ export default function TeleConsultation() {
                 <FiVideo />
                 <h3>Teleconsultation</h3>
                 <p>Online doctor appointment</p>
-                <span className="mode-badge">5 mins</span>
               </button>
 
               <button
@@ -906,7 +1102,6 @@ export default function TeleConsultation() {
                 <FiMapPin />
                 <h3>OPD Visit</h3>
                 <p>Hospital visit booking</p>
-                <span className="mode-badge">15 mins</span>
               </button>
             </section>
 
@@ -934,7 +1129,93 @@ export default function TeleConsultation() {
             </section>
 
             <section className="doctor-section app-fade-stagger">
-              <h3>Doctors for your symptoms</h3>
+              <div className="doctor-section-head">
+                <h3>Available doctors</h3>
+                <p>{mode === "tele" ? "Choose a doctor for video consultation or schedule a later appointment." : "Choose a doctor for OPD visit booking."}</p>
+              </div>
+              {selectedDoctorInfo ? (
+                <article className="selected-doctor-panel">
+                  <div className="selected-doctor-top">
+                    <div className="selected-doctor-avatar">
+                      <span className="doctor-avatar-fallback" aria-hidden="true"><FiUser /></span>
+                      <img
+                        src={selectedDoctorInfo.avatar}
+                        alt={selectedDoctorInfo.name}
+                        loading="lazy"
+                        onError={(event) => handleDoctorAvatarError(event, selectedDoctorInfo.fallbackAvatar)}
+                      />
+                    </div>
+                    <div className="selected-doctor-copy">
+                      <span className="selected-doctor-pill">Selected doctor</span>
+                      <h4>{selectedDoctorInfo.name}</h4>
+                      <p>{selectedDoctorInfo.specialty}</p>
+                    </div>
+                    <div className="selected-doctor-rating">
+                      <FiStar />
+                      <strong>{selectedDoctorInfo.rating.toFixed(1)}</strong>
+                    </div>
+                  </div>
+                  <div className="selected-doctor-grid">
+                    <div className="selected-doctor-fee-card">
+                      <span>Consult fee</span>
+                      <strong>{prepaidConsultActive ? "Included in ₹49 pass" : teleOfferActive && mode === "tele" && selectedDoctorInfo.specialty === "Internal Medicine" ? "Free" : `₹${selectedDoctorInfo.fee}`}</strong>
+                    </div>
+                    <div>
+                      <span>{mode === "tele" ? "Priority" : "Visit type"}</span>
+                      <strong>{prepaidConsultActive ? `${consultDurationMinutes} min paid consult` : teleOfferActive && mode === "tele" && selectedDoctorInfo.specialty === "Internal Medicine" ? "Unlimited GP" : mode === "tele" ? "Video consult" : "Clinic visit"}</strong>
+                    </div>
+                    <div>
+                      <span>Reviews</span>
+                      <strong>{selectedDoctorInfo.reviews} trusted</strong>
+                    </div>
+                    <div>
+                      <span>Mode</span>
+                      <strong>{mode === "tele" ? "Video call" : "OPD visit"}</strong>
+                    </div>
+                  </div>
+                  <div className="selected-doctor-actions">
+                    <button
+                      className="selected-secondary app-pressable"
+                      type="button"
+                      disabled={isBookingNow}
+                      onClick={() =>
+                        navigate("/teleconsultation/schedule", {
+                          state: {
+                            doctor: selectedDoctorInfo,
+                            mode,
+                            analysisQuery,
+                            selectedSymptoms,
+                          },
+                        })
+                      }
+                    >
+                      <FiCalendar />
+                      Schedule Slot
+                    </button>
+                    <button className="selected-primary app-pressable" type="button" onClick={continueJourney} disabled={isBookingNow}>
+                      {isBookingNow ? (
+                        <span className="book-btn-loading">
+                          <span className="book-btn-spinner" aria-hidden="true" />
+                          Processing...
+                        </span>
+                      ) : (
+                        <>
+                          <FiCheckCircle />
+                          {selectedDoctorRequiresPayment
+                            ? mode === "tele"
+                              ? "Continue to Payment"
+                              : "Continue to Schedule"
+                            : prepaidConsultActive
+                              ? `Use ${consultDurationMinutes} Min Consult`
+                            : mode === "tele"
+                              ? "Book Instant Call"
+                              : "Continue to Pickup"}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </article>
+              ) : null}
               <div className={`doctor-list ${showDoctors ? "ready" : ""}`}>
                 {visibleDoctors.map((doctor, index) => (
                   <button
@@ -946,13 +1227,12 @@ export default function TeleConsultation() {
                     type="button"
                   >
                     <div className="doctor-avatar">
+                      <span className="doctor-avatar-fallback" aria-hidden="true"><FiUser /></span>
                       <img
                         src={doctor.avatar}
                         alt={doctor.name}
                         loading="lazy"
-                        onError={(event) => {
-                          event.currentTarget.src = doctor.fallbackAvatar
-                        }}
+                        onError={(event) => handleDoctorAvatarError(event, doctor.fallbackAvatar)}
                       />
                     </div>
                     <div className="doctor-main">
@@ -962,9 +1242,19 @@ export default function TeleConsultation() {
                         <span className="doctor-rating"><FiStar /> {doctor.rating.toFixed(1)}</span>
                         <span className="doctor-reviews">{doctor.reviews} Reviews</span>
                       </div>
+                      <div className="doctor-fee-row">
+                        <span>Consult fee</span>
+                        <strong>{prepaidConsultActive ? "Included" : teleOfferActive && mode === "tele" && doctor.specialty === "Internal Medicine" ? "Free" : `₹${doctor.fee}`}</strong>
+                      </div>
                     </div>
                     <div className="doctor-time-badge">
-                      {mode === "tele" ? "Call" : "Visit"} {doctor.eta}
+                      {prepaidConsultActive
+                        ? `${consultDurationMinutes} min paid`
+                        : teleOfferActive && mode === "tele" && doctor.specialty === "Internal Medicine"
+                        ? "GP Priority"
+                        : mode === "tele"
+                          ? "Video consult"
+                          : "Clinic visit"}
                     </div>
                     <div className="doctor-go" aria-hidden="true">
                       <FiArrowUpRight />
@@ -973,6 +1263,22 @@ export default function TeleConsultation() {
                 ))}
                 {doctorLoading && (
                   <div className="doctor-loading">Loading more doctors...</div>
+                )}
+                {!doctorLoading && visibleDoctors.length === 0 && (
+                  <div className="doctor-empty-state">
+                    <h4>No doctors match this selection yet</h4>
+                    <p>Try another specialty or clear the search to see the full Astikan doctor pool.</p>
+                    <button
+                      type="button"
+                      className="doctor-empty-reset app-pressable"
+                      onClick={() => {
+                        setQuery("")
+                        setActiveSpecialty("All Specialties")
+                      }}
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
                 )}
                 <div ref={loadMoreRef} className="doctor-load-sentinel" />
               </div>
@@ -1020,12 +1326,20 @@ export default function TeleConsultation() {
 
             {joinReady && (
               <>
-            <div className="video-top">
-              <h3>{selectedDoctorInfo.name}</h3>
-              <p>{selectedDoctorInfo.specialty}</p>
+            <div className="tele-call-chrome">
+              <button className="tele-call-back app-pressable" type="button" onClick={exitCallToPreviousScreen} aria-label="Back">
+                <FiArrowLeft />
+              </button>
+              <div className="video-top">
+                <h3>{selectedDoctorInfo.name}</h3>
+                <p>{selectedDoctorInfo.specialty}</p>
+              </div>
+              <div className={`tele-connection-pill ${callState === "live" ? "live" : ""}`}>
+                {callState === "live" ? "Live" : "Connecting"}
+              </div>
             </div>
 
-            <div className="video-call-shell">
+            <div className="video-call-shell tele-call-surface">
               <div className="video-screen remote">
                 <video ref={remoteVideoRef} className="video-stream" playsInline autoPlay />
                 {!hasRemoteStream && (
@@ -1037,6 +1351,7 @@ export default function TeleConsultation() {
               </div>
               <div className="video-screen local">
                 <video ref={localVideoRef} className="video-stream" playsInline autoPlay muted />
+                <span className="video-self-label">You</span>
               </div>
             </div>
 
@@ -1071,7 +1386,43 @@ export default function TeleConsultation() {
               </div>
             )}
 
-            <div className="video-controls" />
+            {(callState === "live" || callState === "connecting") && (
+              <div className="video-controls">
+                <button
+                  type="button"
+                  className={`video-control-btn ${!micOn ? "off" : ""}`}
+                  onClick={toggleMic}
+                  aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
+                >
+                  {micOn ? <FiMic /> : <FiMicOff />}
+                </button>
+                <button
+                  type="button"
+                  className={`video-control-btn ${!cameraOn ? "off" : ""}`}
+                  onClick={toggleCamera}
+                  aria-label={cameraOn ? "Turn camera off" : "Turn camera on"}
+                >
+                  {cameraOn ? <FiVideo /> : <FiVideoOff />}
+                </button>
+                <button
+                  type="button"
+                  className={`video-control-btn ${!speakerOn ? "off" : ""}`}
+                  onClick={toggleSpeaker}
+                  aria-label={speakerOn ? "Mute speaker" : "Unmute speaker"}
+                >
+                  {speakerOn ? <FiVolume2 /> : <FiVolumeX />}
+                </button>
+                <button
+                  type="button"
+                  className="video-control-btn end video-control-hangup"
+                  onClick={endCallNow}
+                  aria-label="Hang up"
+                >
+                  <FiPhoneOff />
+                  <span>Hang Up</span>
+                </button>
+              </div>
+            )}
               </>
             )}
           </section>
@@ -1148,17 +1499,23 @@ export default function TeleConsultation() {
               >
                 Schedule
               </button>
-              <button className="book-btn app-pressable" type="button" onClick={continueJourney} disabled={isBookingNow}>
-                {isBookingNow ? (
-                  <span className="book-btn-loading">
-                    <span className="book-btn-spinner" aria-hidden="true" />
-                    Processing booking...
-                  </span>
-                ) : (
-                  "Book Now"
-                )}
-              </button>
-            </div>
+                <button className="book-btn app-pressable" type="button" onClick={continueJourney} disabled={isBookingNow}>
+                  {isBookingNow ? (
+                    <span className="book-btn-loading">
+                      <span className="book-btn-spinner" aria-hidden="true" />
+                      Processing booking...
+                    </span>
+                  ) : (
+                    selectedDoctorRequiresPayment
+                      ? mode === "tele"
+                        ? "Continue to Payment"
+                        : "Continue to Schedule"
+                      : prepaidConsultActive
+                        ? `Use ${consultDurationMinutes} Min Consult`
+                      : "Book Now"
+                  )}
+                </button>
+              </div>
           )}
           {bookingError && <p className="tele-booking-error">{bookingError}</p>}
           {!selectedDoctorInfo && (

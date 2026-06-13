@@ -213,6 +213,25 @@
   font-size: 0.9rem;
 }
 
+.medicine-detail-page .medicine-price-block {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.medicine-detail-page .medicine-price-block strong {
+  font-size: 1.3rem;
+  color: #1f2340;
+  font-family: "Satoshi", sans-serif;
+}
+
+.medicine-detail-page .medicine-price-block span {
+  font-size: 0.82rem;
+  color: #7c8597;
+  text-decoration: line-through;
+}
+
 .medicine-detail-page .availability {
   display: inline-flex;
   border-radius: 999px;
@@ -637,3 +656,14 @@
 .medicine-detail-page .upsell-add:disabled {
   opacity: 0.55;
 }
+
+
+/* Astikan detail polish */
+.medicine-detail-page .medicine-detail-header { padding-top: max(18px, env(safe-area-inset-top)); min-height: 86px; }
+.medicine-detail-page .medicine-detail-shell { padding-top: 100px; }
+.medicine-detail-page .medicine-hero-card { border-radius: 16px; box-shadow: 0 10px 20px rgba(30,45,72,.08); }
+.medicine-detail-page .medicine-hero-card img { height: 160px; }
+.medicine-detail-page .medicine-hero-copy { padding: 10px 12px; gap: 4px; }
+.medicine-detail-page .medicine-hero-head h2 { font-size: 1.08rem; }
+.medicine-detail-page .medicine-price-block span { display: none !important; }
+.insight-strip { display: none !important; }

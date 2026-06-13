@@ -1,7 +1,6 @@
 import { useState } from "react"
 import {
   FiArrowLeft,
-  FiBriefcase,
   FiCheckCircle,
   FiEye,
   FiEyeOff,
@@ -11,10 +10,6 @@ import {
 } from "react-icons/fi"
 import { Link, useNavigate } from "react-router-dom"
 import "./forgot.css"
-
-function isValidCompanyCode(value: string) {
-  return /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{12}$/.test(value)
-}
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -31,7 +26,6 @@ export default function ForgotPassword() {
 
   const [step, setStep] = useState<Step>("verify")
   const [email, setEmail] = useState("")
-  const [companyCode, setCompanyCode] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -39,29 +33,14 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  function handleCompanyCode(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .slice(0, 12)
-
-    setCompanyCode(value)
-    setError("")
-  }
-
   function handleVerifyContinue() {
-    if (!email || !companyCode) {
-      setError("Please enter email and company code")
+    if (!email) {
+      setError("Please enter your email")
       return
     }
 
     if (!isValidEmail(email)) {
-      setError("Please enter a valid work email")
-      return
-    }
-
-    if (!isValidCompanyCode(companyCode)) {
-      setError("Company code must be 12 characters with letters and numbers")
+      setError("Please enter a valid email")
       return
     }
 
@@ -97,7 +76,7 @@ export default function ForgotPassword() {
     }, 900)
   }
 
-  const isVerifyValid = isValidEmail(email) && isValidCompanyCode(companyCode)
+  const isVerifyValid = isValidEmail(email)
   const isResetValid = isStrongPassword(newPassword) && confirmPassword === newPassword
 
   return (
@@ -109,7 +88,7 @@ export default function ForgotPassword() {
           </span>
           <h1>{step === "verify" ? "Forgot Password" : "Create New Password"}</h1>
           <p>
-            {step === "verify" && "Enter email and company code to verify your account"}
+            {step === "verify" && "Enter your email to verify your account"}
             {step === "reset" && "Create and confirm your new password"}
             {step === "success" && "Password reset completed successfully"}
           </p>
@@ -118,7 +97,7 @@ export default function ForgotPassword() {
         <div className="forgot-card animate-in app-fade-stagger">
           {step === "verify" && (
             <>
-              <label htmlFor="forgot-email">Work Email</label>
+              <label htmlFor="forgot-email">Email</label>
               <div className="forgot-input-wrapper">
                 <span className="forgot-icon">
                   <FiMail aria-hidden="true" />
@@ -126,29 +105,13 @@ export default function ForgotPassword() {
                 <input
                   id="forgot-email"
                   type="email"
-                  placeholder="Enter your work email"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value)
                     setError("")
                   }}
                   disabled={loading}
-                />
-              </div>
-
-              <label htmlFor="forgot-company">Company Code</label>
-              <div className="forgot-input-wrapper">
-                <span className="forgot-icon">
-                  <FiBriefcase aria-hidden="true" />
-                </span>
-                <input
-                  id="forgot-company"
-                  type="text"
-                  placeholder="ENTER 12-CHARACTER CODE"
-                  value={companyCode}
-                  onChange={handleCompanyCode}
-                  disabled={loading}
-                  maxLength={12}
                 />
               </div>
 

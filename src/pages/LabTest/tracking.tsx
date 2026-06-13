@@ -1,12 +1,9 @@
 import { FiArrowLeft, FiCheckCircle, FiClock, FiMapPin } from "react-icons/fi"
 import { RiTestTubeLine } from "react-icons/ri"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import mapboxgl from "mapbox-gl"
-import "mapbox-gl/dist/mapbox-gl.css"
-import { addNotification } from "../../services/notificationCenter"
-import { ensureEmployeeActor } from "../../services/actorsApi"
-import { getLabOrderById, subscribeLabOrderUpdates } from "../../services/labApi"
+import { getLabOrderById, getLabReportLink, buildReportDownloadName } from "../../services/labApi"
+import { getEmployeeAuthSession } from "../../services/authApi"
 import "./labtest.css"
 
 type LabBooking = {
@@ -16,232 +13,131 @@ type LabBooking = {
   testName: string
   collectionType: string
   scheduledAt: string
-  etaMinutes?: number
-  etaStartAt?: string
+  reportKey?: string | null
 }
 
-const LAB_BOOKINGS_KEY = "lab_bookings"
-const STATUS_STEPS = [
+const NORMAL_STEPS = [
   { id: "pending", label: "Pending registration" },
   { id: "phlebo", label: "Phlebo assigned" },
   { id: "sample", label: "Sample collected" },
   { id: "lab", label: "Received in lab" },
-  { id: "reported", label: "Reported" },
+  { id: "reported", label: "Report ready" },
 ]
 
-function mapStatusToStep(status: string) {
-  const normalized = status.toLowerCase()
-  if (normalized.includes("sample")) return "sample"
+const CANCELLATION_STEPS = [
+  { id: "cancellation_requested", label: "Cancellation Requested" },
+  { id: "cancellation_accepted", label: "Cancellation Accepted" },
+  { id: "processing_refund", label: "Processing Refund" },
+  { id: "refunded", label: "Refunded" },
+]
+
+const CANCELLATION_REJECTED_STEPS = [
+  { id: "cancellation_requested", label: "Cancellation Requested" },
+  { id: "cancellation_rejected", label: "Cancellation Rejected" },
+]
+
+function normalizeStatus(status: string) {
+  return status.toLowerCase().replace(/[\s-]+/g, "_")
+}
+
+function isCancellationStatus(status: string) {
+  const normalized = normalizeStatus(status)
+  return normalized.includes("cancel") || normalized.includes("refund")
+}
+
+function activeStepId(status: string) {
+  const normalized = normalizeStatus(status)
+  if (normalized.includes("refund") && (normalized.includes("done") || normalized.includes("success") || normalized === "refunded")) return "refunded"
+  if (normalized.includes("processing_refund") || normalized.includes("refund_processing") || normalized.includes("refund_pending")) return "processing_refund"
+  if (normalized.includes("accepted") || normalized === "cancelled") return "cancellation_accepted"
+  if (normalized.includes("rejected")) return "cancellation_rejected"
+  if (normalized.includes("cancel")) return "cancellation_requested"
   if (normalized.includes("report") || normalized.includes("complete")) return "reported"
-  if (normalized.includes("process") || normalized.includes("lab")) return "lab"
-  if (normalized.includes("assign")) return "phlebo"
+  if (normalized.includes("received_in_lab") || normalized.includes("in_lab") || normalized.includes("processing")) return "lab"
+  if (normalized.includes("sample_collected") || normalized.includes("sample_collection") || normalized.includes("sample")) return "sample"
+  if (normalized.includes("phlebo") || normalized.includes("assigned") || normalized.includes("collection_team")) return "phlebo"
   return "pending"
+}
+
+function stepsForStatus(status: string) {
+  const normalized = normalizeStatus(status)
+  if (normalized.includes("rejected")) return CANCELLATION_REJECTED_STEPS
+  if (isCancellationStatus(status)) return CANCELLATION_STEPS
+  return NORMAL_STEPS
 }
 
 export default function LabTracking() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const mapboxTokenRaw = (import.meta as any).env?.VITE_MAPBOX_TOKEN
-  const mapboxToken =
-    typeof mapboxTokenRaw === "string" && mapboxTokenRaw.trim() && mapboxTokenRaw !== "undefined" && mapboxTokenRaw !== "null"
-      ? mapboxTokenRaw
-      : ""
-  const mapContainerRef = useRef<HTMLDivElement | null>(null)
-  const mapRef = useRef<mapboxgl.Map | null>(null)
   const [liveBooking, setLiveBooking] = useState<LabBooking | null>(null)
-  const [etaRemaining, setEtaRemaining] = useState<number | null>(null)
-
-  const booking = useMemo(() => {
-    const raw = localStorage.getItem(LAB_BOOKINGS_KEY)
-    if (!raw) return null
-    try {
-      const parsed = JSON.parse(raw) as LabBooking[]
-      return parsed.find((item) => item.id === id) ?? null
-    } catch {
-      return null
-    }
-  }, [id])
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportError, setReportError] = useState("")
 
   const resolvedBooking = liveBooking
-    ? {
-        ...booking,
-        ...liveBooking,
-        etaMinutes: booking?.etaMinutes ?? liveBooking.etaMinutes,
-        etaStartAt: booking?.etaStartAt ?? liveBooking.etaStartAt,
-      }
-    : booking
-  const statusStep = mapStatusToStep(resolvedBooking?.status ?? "pending")
-
-  useEffect(() => {
-    if (!resolvedBooking?.etaMinutes) {
-      setEtaRemaining(null)
-      return
-    }
-    const startAt = resolvedBooking.etaStartAt
-      ? new Date(resolvedBooking.etaStartAt).getTime()
-      : Date.now()
-    const initial = resolvedBooking.etaMinutes
-    const update = () => {
-      const elapsedMin = Math.max(0, Math.floor((Date.now() - startAt) / 60000))
-      const remaining = Math.max(1, initial - elapsedMin)
-      setEtaRemaining(remaining)
-    }
-    update()
-    const interval = window.setInterval(update, 10000)
-    return () => window.clearInterval(interval)
-  }, [resolvedBooking?.etaMinutes, resolvedBooking?.etaStartAt])
+  const status = resolvedBooking?.status ?? "pending_registration"
+  const stepId = activeStepId(status)
+  const steps = stepsForStatus(status)
+  const activeIndex = Math.max(0, steps.findIndex((item) => item.id === stepId))
 
   useEffect(() => {
     if (!id) return
     let active = true
-    let lastStatus = resolvedBooking?.status ?? ""
-    let unsubscribe: (() => void) | null = null
+    const orderId = id
 
-    async function loadInitial() {
+    async function loadOrder() {
       try {
-        if (!id) return
-        await ensureEmployeeActor({ companyReference: "astikan-demo-company", companyName: "Astikan" })
-        const order = await getLabOrderById(id)
+        const order = await getLabOrderById(orderId)
         if (!active || !order) return
-        const mapped: LabBooking = {
+        setLiveBooking({
           id: order.id,
           bookingId: order.providerOrderReference ?? order.id,
           status: order.status,
           testName: order.testName,
           collectionType: "Home Collection",
           scheduledAt: order.slotAt ?? order.createdAt,
-        }
-        setLiveBooking(mapped)
-        lastStatus = order.status
-      } catch {
-        // silent
-      }
-    }
-
-    async function setupStream() {
-      try {
-        if (!id) return
-        const actor = await ensureEmployeeActor({ companyReference: "astikan-demo-company", companyName: "Astikan" })
-        unsubscribe = subscribeLabOrderUpdates(actor.employeeUserId, async (updates) => {
-          const update = updates.find((item) => item.id === id)
-          if (!update) return
-          const nextStatus = update.status
-          if (nextStatus && nextStatus !== lastStatus) {
-            setLiveBooking((prev) =>
-              prev
-                ? { ...prev, status: nextStatus, testName: update.testName }
-                : ({
-                    id,
-                    bookingId: id,
-                    status: nextStatus,
-                    testName: update.testName,
-                    collectionType: "Home Collection",
-                    scheduledAt: new Date().toISOString(),
-                  } as LabBooking)
-            )
-            if (nextStatus.toLowerCase().includes("report")) {
-              await addNotification({
-                title: "Lab report ready",
-                body: `${update.testName} report is now available.`,
-                channel: "health",
-                cta: { label: "View Report", route: "/reports" },
-              })
-            }
-            lastStatus = nextStatus
-          }
+          reportKey: order.reportKey,
         })
       } catch {
-        // silent
+        // The page will retry the live backend lookup.
       }
     }
 
-    void loadInitial()
-    void setupStream()
-
+    void loadOrder()
+    const interval = window.setInterval(loadOrder, 7000)
     return () => {
       active = false
-      if (unsubscribe) unsubscribe()
+      window.clearInterval(interval)
     }
   }, [id])
 
-  useEffect(() => {
-    if (!mapboxToken.trim()) {
-      console.error("Mapbox token missing")
+
+  async function downloadReport() {
+    if (!id) return
+    setReportLoading(true)
+    setReportError("")
+    try {
+      const auth = getEmployeeAuthSession()
+      const employeeId = auth?.userId || ""
+      if (!employeeId) throw new Error("Please login again to download the report.")
+      const url = await getLabReportLink(id, employeeId)
+      if (!url) throw new Error("Report is not uploaded yet.")
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.target = "_blank"
+      anchor.rel = "noopener noreferrer"
+      anchor.download = buildReportDownloadName(resolvedBooking?.testName ?? "lab-report", resolvedBooking?.scheduledAt ?? new Date().toISOString())
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : "Report is not available yet.")
+    } finally {
+      setReportLoading(false)
     }
-  }, [mapboxToken])
-
-  useEffect(() => {
-    if (!mapboxToken || !mapContainerRef.current || mapRef.current) return
-    mapboxgl.accessToken = mapboxToken
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/standard",
-      center: [77.209, 28.6139],
-      zoom: 11.2,
-      pitch: 55,
-      bearing: -25,
-      antialias: true,
-    })
-
-    const hideLabels = () => {
-      const style = map.getStyle()
-      style.layers?.forEach((layer) => {
-        const id = layer.id.toLowerCase()
-        const hasText =
-          layer.type === "symbol" && Boolean((layer.layout as any)?.["text-field"])
-        const looksLikeLabel =
-          id.includes("label") ||
-          id.includes("place") ||
-          id.includes("road") ||
-          id.includes("highway") ||
-          id.includes("poi") ||
-          id.includes("airport")
-        if (hasText || looksLikeLabel) {
-          map.setLayoutProperty(layer.id, "visibility", "none")
-        }
-      })
-    }
-
-    map.on("load", () => {
-      map.addSource("mapbox-dem", {
-        type: "raster-dem",
-        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-        tileSize: 512,
-        maxzoom: 14,
-      })
-      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.35 })
-      hideLabels()
-    })
-
-    map.on("styledata", hideLabels)
-    map.on("error", (event) => {
-      const err = (event as { error?: Error }).error
-      console.error("Mapbox error", err ?? event)
-    })
-    map.scrollZoom.disable()
-    map.boxZoom.disable()
-    map.dragPan.disable()
-    map.dragRotate.disable()
-    map.keyboard.disable()
-    map.doubleClickZoom.disable()
-    map.touchZoomRotate.disable()
-
-    const userEl = document.createElement("div")
-    userEl.className = "map-marker map-marker--user"
-    userEl.textContent = "U"
-    new mapboxgl.Marker({ element: userEl }).setLngLat([77.209, 28.6139]).addTo(map)
-
-    const labEl = document.createElement("div")
-    labEl.className = "map-marker map-marker--lab"
-    labEl.innerHTML =
-      "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M9 3h6v2l-1 1v4.3l4.6 7.7A3 3 0 0 1 15.9 22H8.1a3 3 0 0 1-2.7-4.5L10 10.3V6L9 5V3zm2 6.7L7.1 18a1 1 0 0 0 .9 1.5h7.8a1 1 0 0 0 .9-1.5L13 9.7V6h-2v3.7z\"/></svg>"
-    new mapboxgl.Marker({ element: labEl }).setLngLat([77.1706, 28.6723]).addTo(map)
-
-    mapRef.current = map
-  }, [mapboxToken])
+  }
 
   return (
-    <main className="lab-page tracking-page app-page-enter">
+    <main className="lab-page tracking-page tracking-page--no-map app-page-enter">
       <header className="lab-header app-fade-stagger">
         <button className="lab-back" onClick={() => navigate(-1)} type="button" aria-label="Back">
           <FiArrowLeft />
@@ -262,20 +158,15 @@ export default function LabTracking() {
           </div>
           <div className="lab-meta-row muted">
             <span><FiCheckCircle /> Booking ID {resolvedBooking?.bookingId ?? "Pending"}</span>
-            {etaRemaining !== null && <span>{etaRemaining} mins away</span>}
+            <span>{isCancellationStatus(status) ? "Cancellation/refund workflow" : "Collection team coordinating"}</span>
           </div>
         </div>
       </section>
 
-      <section className="lab-map-wrap app-fade-stagger">
-        <div ref={mapContainerRef} className="lab-map" aria-label="Live tracking map" />
-      </section>
-
       <section className="lab-status-list app-fade-stagger">
-        {STATUS_STEPS.map((step) => {
-          const isActive = step.id === statusStep
-          const isDone = STATUS_STEPS.findIndex((item) => item.id === step.id) <
-            STATUS_STEPS.findIndex((item) => item.id === statusStep)
+        {steps.map((step, index) => {
+          const isActive = index === activeIndex
+          const isDone = index < activeIndex
           return (
             <article key={step.id} className={`lab-status-item ${isActive ? "active" : ""} ${isDone ? "done" : ""}`}>
               <span className="lab-status-dot" aria-hidden="true" />
@@ -288,15 +179,12 @@ export default function LabTracking() {
         })}
       </section>
 
-      {statusStep === "reported" && (
+      {stepId === "reported" && (
         <div className="lab-actions app-fade-stagger">
-          <button
-            className="lab-primary-btn"
-            type="button"
-            onClick={() => navigate(`/lab-tests/report/${id}`)}
-          >
-            View Report
+          <button className="lab-primary-btn" type="button" onClick={() => void downloadReport()} disabled={reportLoading}>
+            {reportLoading ? "Opening Report..." : resolvedBooking?.reportKey ? "Download Report" : "Report Upload Pending"}
           </button>
+          {reportError ? <p className="location-error">{reportError}</p> : null}
         </div>
       )}
     </main>

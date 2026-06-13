@@ -1,0 +1,798 @@
+.consumer-screen {
+  min-height: 100dvh;
+  background: #ffffff;
+  color: #071431;
+  font-family: "Manrope", system-ui, sans-serif;
+  padding: 0 24px calc(28px + env(safe-area-inset-bottom));
+}
+.consumer-screen.with-nav {
+  padding-bottom: calc(116px + env(safe-area-inset-bottom));
+  background: #f8fbff;
+}
+.consumer-status {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #050b1f;
+}
+.consumer-status-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.signal-bars {
+  display: inline-flex;
+  align-items: end;
+  gap: 2px;
+  height: 15px;
+}
+.signal-bars span {
+  width: 3px;
+  border-radius: 3px;
+  background: #050b1f;
+}
+.signal-bars span:nth-child(1) { height: 6px; }
+.signal-bars span:nth-child(2) { height: 9px; }
+.signal-bars span:nth-child(3) { height: 12px; }
+.signal-bars span:nth-child(4) { height: 15px; }
+.battery-icon {
+  width: 25px;
+  height: 13px;
+  border: 2px solid #111827;
+  border-radius: 4px;
+  position: relative;
+  display: inline-block;
+}
+.battery-icon::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 3px;
+  width: 3px;
+  height: 5px;
+  border-radius: 0 2px 2px 0;
+  background: #111827;
+}
+.battery-icon::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: 15px;
+  border-radius: 2px;
+  background: #111827;
+}
+.consumer-topbar {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.consumer-back,
+.consumer-icon-btn {
+  width: 42px;
+  height: 42px;
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #06132f;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.consumer-back svg,
+.consumer-icon-btn svg {
+  width: 23px;
+  height: 23px;
+}
+.consumer-title {
+  margin: 0;
+  text-align: center;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+  color: #081532;
+}
+.consumer-subtitle {
+  margin: 4px 0 0;
+  text-align: center;
+  color: #667085;
+  font-size: 15px;
+  font-weight: 600;
+}
+.location-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #0f63d9;
+  font-size: 15px;
+  font-weight: 800;
+  margin: 4px 0 10px;
+}
+.location-row svg { width: 20px; height: 20px; }
+.hospital-headline {
+  margin: 0;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 30px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+.hospital-list-sub {
+  margin: 6px 0 16px;
+  color: #69748a;
+  font-size: 15px;
+  font-weight: 600;
+}
+.hospital-search-row {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.hospital-search,
+.filter-button {
+  min-height: 54px;
+  border: 1px solid #e4e9f2;
+  background: #ffffff;
+  border-radius: 13px;
+  box-shadow: 0 8px 20px rgba(9, 36, 87, 0.04);
+}
+.hospital-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  color: #98a2b3;
+  font-size: 14px;
+  font-weight: 700;
+}
+.hospital-search svg { color: #667085; width: 20px; height: 20px; }
+.filter-button {
+  color: #1265d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+}
+.specialty-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(70px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+.specialty-pill {
+  min-height: 82px;
+  border: 0;
+  background: #ffffff;
+  color: #111a36;
+  border-radius: 14px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(9, 36, 87, 0.04);
+  font-size: 12px;
+  font-weight: 800;
+}
+.specialty-pill.active {
+  background: #eef5ff;
+  color: #1369df;
+}
+.specialty-pill svg { width: 23px; height: 23px; }
+.results-sort-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0 10px;
+  color: #4f5e78;
+  font-size: 13px;
+  font-weight: 700;
+}
+.results-sort-row strong { color: #101a36; }
+.hospital-card-list {
+  display: grid;
+  gap: 12px;
+}
+.hospital-list-card {
+  border: 1px solid #ebeff6;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 13px;
+  box-shadow: 0 10px 28px rgba(10, 32, 71, 0.06);
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 14px;
+  text-align: left;
+  color: #071431;
+  width: 100%;
+}
+.hospital-card-image {
+  height: 142px;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+  background: #e9eef7;
+}
+.hospital-card-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.open-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: #ffffff;
+  color: #0f9a5d;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 6px 18px rgba(15, 154, 93, 0.18);
+}
+.open-badge::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #12b76a;
+  margin-right: 4px;
+}
+.hospital-list-info {
+  position: relative;
+  padding-right: 24px;
+}
+.hospital-like {
+  position: absolute;
+  right: 0;
+  top: 1px;
+  color: #9aa4b5;
+}
+.hospital-list-info h3 {
+  margin: 2px 0 7px;
+  font-family: "Satoshi";
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+.meta-line {
+  margin: 0 0 7px;
+  color: #68758b;
+  font-size: 12px;
+  line-height: 1.25;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-weight: 700;
+}
+.meta-line svg { width: 14px; height: 14px; flex: 0 0 auto; color: #67738a; }
+.rating-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+  font-size: 12px;
+  color: #667085;
+  font-weight: 700;
+}
+.rating-line .star { color: #11a861; font-size: 14px; }
+.speciality-line { color: #0d67d8; font-weight: 800; }
+.available-line strong { color: #08965d; }
+.card-book-btn {
+  min-height: 40px;
+  margin-top: 7px;
+  border: 0;
+  border-radius: 10px;
+  background: #0b66f6;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+}
+.trust-strip {
+  position: fixed;
+  left: 50%;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(100%, var(--app-frame-width));
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #ffffff;
+  border-top: 1px solid #edf0f6;
+  box-shadow: 0 -8px 24px rgba(10, 32, 71, 0.05);
+}
+.trust-strip div {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-right: 1px solid #edf0f6;
+}
+.trust-strip div:last-child { border-right: 0; }
+.trust-strip svg { color: #1265d8; width: 24px; height: 24px; }
+.trust-strip strong { display: block; font-size: 12px; line-height: 1.1; }
+.trust-strip span { display: block; font-size: 10px; color: #7b8496; }
+.consumer-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, var(--app-frame-width));
+  height: calc(64px + env(safe-area-inset-bottom));
+  padding: 4px 10px env(safe-area-inset-bottom);
+  background: #ffffff;
+  border-top: 1px solid #edf0f6;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  z-index: 20;
+}
+.consumer-bottom-nav button {
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  color: #596579;
+  font-size: 11px;
+  font-weight: 700;
+}
+.consumer-bottom-nav button.active { color: #0b66f6; }
+.consumer-bottom-nav svg { width: 22px; height: 22px; }
+.hospital-detail-hero {
+  display: grid;
+  grid-template-columns: 212px 1fr;
+  gap: 24px;
+  align-items: center;
+}
+.detail-photo {
+  border-radius: 18px;
+  overflow: hidden;
+  height: 240px;
+  position: relative;
+  background: #eef2f7;
+}
+.detail-photo img { width: 100%; height: 100%; object-fit: cover; }
+.photo-count {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.65);
+  color: #ffffff;
+  padding: 8px 12px;
+  font-weight: 900;
+  font-size: 12px;
+}
+.detail-name { margin: 0 0 9px; font-family: "Satoshi"; font-size: 28px; letter-spacing: -0.04em; }
+.detail-meta { margin: 8px 0; color: #5f6b80; font-size: 14px; font-weight: 700; display: flex; align-items: flex-start; gap: 8px; }
+.detail-meta svg { color: #61708a; width: 18px; height: 18px; flex: 0 0 auto; }
+.detail-meta.open { color: #0c9b5a; }
+.detail-feature-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin: 22px 0;
+}
+.detail-feature {
+  border: 0;
+  background: #f5f7fb;
+  border-radius: 14px;
+  min-height: 70px;
+  display: grid;
+  place-items: center;
+  color: #06132f;
+  font-size: 11px;
+  font-weight: 800;
+}
+.detail-feature svg { color: #667085; width: 22px; height: 22px; }
+.verified-card {
+  border-radius: 15px;
+  background: #edf5ff;
+  display: grid;
+  grid-template-columns: 42px 1fr 28px;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 15px;
+  color: #0f63d9;
+  font-weight: 900;
+}
+.verified-card span { display: block; color: #43516a; font-weight: 700; margin-top: 2px; }
+.about-block { margin-top: 22px; border-bottom: 1px solid #edf0f6; padding-bottom: 18px; }
+.about-block h2, .slots-block h2 { margin: 0 0 8px; font-size: 20px; font-family: "Satoshi"; letter-spacing: -0.03em; }
+.about-block p { color: #5c687d; line-height: 1.5; margin: 0; font-size: 14px; font-weight: 600; }
+.read-more { color: #0f63d9; font-weight: 900; margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; }
+.slots-block { margin-top: 22px; padding-bottom: 96px; }
+.slots-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.slots-header p { margin: 2px 0 0; color: #778195; font-size: 13px; font-weight: 700; }
+.calendar-link { color: #1265d8; display: inline-flex; align-items: center; gap: 7px; font-weight: 900; }
+.date-row { display: grid; grid-auto-flow: column; grid-auto-columns: 70px; overflow-x: auto; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #edf0f6; }
+.date-chip { min-height: 76px; border: 1px solid #edf0f6; border-radius: 12px; background: #fff; color: #0e1834; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.date-chip.active { border-color: #0b66f6; background: #f5f9ff; color: #0b66f6; }
+.date-chip span { display: block; text-align: center; }
+.slot-section-title { display: flex; align-items: center; gap: 8px; color: #4a566e; margin: 18px 0 12px; font-weight: 800; }
+.slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.slot-pill { min-height: 44px; border: 1px solid #85cbb6; color: #09875b; border-radius: 9px; font-weight: 900; background: #fff; }
+.slot-pill.selected { background: #09945d; color: #fff; border-color: #09945d; }
+.slot-pill.disabled { opacity: .42; border-color: #d4d9e3; color: #9aa4b5; }
+.next-slot { margin-top: 18px; border-radius: 14px; background: #eaf7f1; color: #187a56; padding: 15px 16px; font-weight: 900; display: flex; gap: 8px; align-items: center; }
+.booking-bottom-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, var(--app-frame-width));
+  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid #edf0f6;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(14px);
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 -12px 32px rgba(10, 32, 71, 0.06);
+}
+.booking-bottom-bar strong { display: block; font-size: 14px; color: #081532; }
+.booking-bottom-bar span { display: block; font-size: 12px; color: #778195; }
+.primary-cta {
+  border: 0;
+  min-height: 58px;
+  border-radius: 12px;
+  background: #0b66f6;
+  color: #ffffff;
+  font-weight: 900;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 12px 24px rgba(11, 102, 246, 0.18);
+}
+.primary-cta.green { background: #079455; box-shadow: 0 12px 24px rgba(7, 148, 85, 0.18); }
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: center;
+  margin: 12px auto 32px;
+  width: 75%;
+  position: relative;
+}
+.stepper::before { content:""; position:absolute; height:2px; background:#e4e8f1; left:34px; right:34px; top:17px; }
+.stepper::after { content:""; position:absolute; height:2px; background:#0b66f6; left:34px; right:50%; top:17px; }
+.step { position: relative; display: grid; justify-items: center; gap: 8px; color: #7d8799; font-size: 12px; font-weight: 800; }
+.step span { z-index:1; display:grid; place-items:center; width:34px; height:34px; border-radius:999px; background:#f4f6fa; border:1px solid #d9e0ea; color:#7d8799; }
+.step.active { color:#0b66f6; }
+.step.active span { background:#0b66f6; color:#fff; border-color:#0b66f6; }
+.appointment-summary-card,
+.form-card,
+.confirm-card,
+.success-card,
+.note-card,
+.secure-strip,
+.help-strip {
+  border: 1px solid #edf0f6;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(10, 32, 71, 0.05);
+}
+.appointment-summary-card { padding: 16px; display: grid; grid-template-columns: 122px 1fr; gap: 16px; align-items: center; margin-bottom: 24px; }
+.summary-photo { height: 130px; border-radius: 14px; overflow: hidden; }
+.summary-photo img { width: 100%; height: 100%; object-fit: cover; }
+.summary-heading { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.summary-heading h2 { margin: 0; font-family: "Satoshi"; font-size: 21px; }
+.status-chip { border-radius: 999px; background:#e9f8f0; color:#079455; padding: 8px 12px; font-size:12px; font-weight:900; }
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; }
+.summary-grid div { border-right:1px solid #edf0f6; display:grid; justify-items:center; gap:4px; font-size:12px; color:#68758b; font-weight:700; text-align:center; }
+.summary-grid div:last-child { border-right:0; }
+.summary-grid svg { color:#0b66f6; width:21px; height:21px; }
+.summary-grid strong { color:#071431; font-size:15px; }
+.form-card { padding: 18px; margin-bottom: 18px; }
+.form-title-row { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.form-title-row h2 { margin:0; font-family:"Satoshi"; font-size:21px; }
+.form-title-icon { width:42px; height:42px; border-radius:12px; background:#f0f6ff; color:#0b66f6; display:grid; place-items:center; }
+.field-label { display:block; color:#34405a; font-size:13px; font-weight:800; margin: 14px 0 8px; }
+.field-label.required::after { content:" *"; color:#e84855; }
+.input-box { min-height: 55px; border:1px solid #e2e7f0; border-radius:10px; background:#fff; display:flex; align-items:center; overflow:hidden; }
+.input-box input { border:0; outline:0; flex:1; height:100%; padding:0 14px; background:transparent; font-weight:700; }
+.input-prefix { width:64px; align-self:stretch; display:grid; place-items:center; border-right:1px solid #e2e7f0; color:#101a36; font-weight:900; background:#fbfcff; }
+.input-suffix { padding:0 14px; color:#7a8496; font-weight:800; }
+.gender-row { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
+.gender-card { border:1px solid #e3e8f0; min-height:58px; border-radius:10px; background:#fff; color:#101a36; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:900; }
+.gender-card.active { border-color:#0b66f6; background:#f3f8ff; color:#0b66f6; }
+.security-inline { background:#eef5ff; border-radius:12px; color:#46536b; padding:14px 16px; display:flex; align-items:center; gap:10px; font-size:13px; font-weight:800; }
+.sticky-summary { position: sticky; bottom: 0; margin: 18px -24px -28px; padding:18px 24px calc(18px + env(safe-area-inset-bottom)); background:#fff; border:1px solid #edf0f6; border-radius:22px 22px 0 0; box-shadow: 0 -12px 32px rgba(10, 32, 71, 0.08); }
+.sticky-summary-info { display:grid; grid-template-columns: 1fr 1px 1fr; gap:16px; align-items:center; margin-bottom:16px; }
+.sticky-summary-info .divider { width:1px; height:60px; background:#edf0f6; }
+.sticky-summary-info h4 { margin:0 0 7px; font-family:"Satoshi"; font-size:15px; }
+.sticky-summary-info p { margin:0; color:#667085; font-weight:700; font-size:13px; line-height:1.45; }
+.total-free { color:#079455; font-size:22px; font-weight:1000; }
+.confirm-card { padding: 20px; margin-bottom: 22px; }
+.confirm-hospital-card { padding:16px; display:grid; grid-template-columns: 150px 1fr; gap:16px; margin-bottom:24px; }
+.confirm-hospital-card img { width:150px; height:150px; border-radius:14px; object-fit:cover; }
+.confirm-hospital-card h2 { margin:6px 0 8px; font-size:26px; font-family:"Satoshi"; }
+.detail-row { display:flex; justify-content:space-between; gap:14px; padding:13px 0; border-bottom:1px solid #edf0f6; font-size:14px; color:#4c5a72; font-weight:700; }
+.detail-row:last-child { border-bottom:0; }
+.detail-row strong { color:#101a36; text-align:right; }
+.confirm-section-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; }
+.confirm-section-head h2 { margin:0; font-family:"Satoshi"; font-size:21px; display:flex; align-items:center; gap:10px; }
+.edit-link { color:#0b66f6; font-weight:900; display:inline-flex; align-items:center; gap:7px; }
+.note-card { background:#edf5ff; padding:18px; margin-bottom:22px; display:grid; grid-template-columns:32px 1fr; gap:12px; box-shadow:none; }
+.note-card h3 { margin:0 0 8px; color:#0b66f6; font-family:"Satoshi"; }
+.note-card p { margin:6px 0; color:#46536b; font-weight:700; display:flex; gap:8px; align-items:center; }
+.secure-footnote { color:#667085; display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:700; margin-top:12px; }
+.success-hero { text-align:center; padding-top:16px; }
+.success-check { width:88px; height:88px; border-radius:999px; background:#e8f8f1; display:grid; place-items:center; margin:0 auto 20px; position:relative; color:#079455; }
+.success-check::before { content:""; position:absolute; inset:12px; border-radius:999px; background:#079455; }
+.success-check svg { position:relative; z-index:1; color:#fff; width:42px; height:42px; }
+.success-hero h1 { margin:0; font-family:"Satoshi"; font-size:27px; letter-spacing:-0.04em; }
+.success-hero p { margin:8px 0 26px; color:#667085; font-weight:700; }
+.success-card { padding:16px; margin-bottom:18px; }
+.booking-id-row { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.copy-link { color:#079455; font-weight:900; display:inline-flex; align-items:center; gap:7px; }
+.success-hospital-card { display:grid; grid-template-columns:118px 1fr; gap:16px; padding:16px; }
+.success-hospital-card img { width:118px; height:118px; object-fit:cover; border-radius:13px; }
+.success-hospital-card h2 { margin:2px 0 6px; font-family:"Satoshi"; font-size:22px; }
+.patient-tile { display:grid; grid-template-columns:44px 1fr 24px; align-items:center; gap:12px; padding:16px; }
+.patient-tile h3 { margin:0; font-size:14px; color:#667085; }
+.patient-tile p { margin:4px 0 0; font-weight:900; color:#101a36; }
+.important-card { background:#e9f8f0; color:#176b4c; border:0; box-shadow:none; padding:18px; }
+.important-card h3 { margin:0 0 8px; font-family:"Satoshi"; }
+.important-card p { margin:6px 0; font-weight:700; }
+.next-actions { margin-top:22px; }
+.next-actions h2 { font-family:"Satoshi"; font-size:22px; margin:0 0 12px; }
+.next-action-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.next-action { min-height:94px; border:1px solid #edf0f6; background:#fff; border-radius:12px; color:#101a36; display:grid; place-items:center; gap:8px; font-size:13px; font-weight:900; text-align:center; }
+.next-action svg { color:#079455; width:29px; height:29px; }
+.help-strip { margin-top:18px; background:#f5f7fb; padding:14px 16px; display:grid; grid-template-columns:36px 1fr auto; align-items:center; gap:10px; box-shadow:none; }
+.help-strip h3 { margin:0; font-size:14px; }
+.help-strip p { margin:2px 0 0; color:#69748a; font-size:12px; font-weight:700; }
+@media (max-width: 430px) {
+  .consumer-screen { padding-left: 18px; padding-right: 18px; }
+  .hospital-list-card { grid-template-columns: 132px 1fr; gap: 12px; padding: 10px; }
+  .hospital-card-image { height: 128px; }
+  .hospital-list-info h3 { font-size: 16px; }
+  .card-book-btn { padding: 0 11px; font-size: 12px; }
+  .hospital-detail-hero { grid-template-columns: 1fr; gap: 14px; }
+  .detail-photo { height: 240px; }
+  .detail-feature-row { gap: 8px; }
+  .slot-grid { grid-template-columns: repeat(2, 1fr); }
+  .booking-bottom-bar { grid-template-columns: 1fr; }
+  .appointment-summary-card, .confirm-hospital-card, .success-hospital-card { grid-template-columns: 96px 1fr; }
+  .summary-photo, .confirm-hospital-card img, .success-hospital-card img { width:96px; height:96px; }
+  .summary-grid { gap: 8px; }
+  .sticky-summary { margin-left:-18px; margin-right:-18px; padding-left:18px; padding-right:18px; }
+}
+
+.consumer-screen {
+  text-align: left !important;
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 0 16px calc(22px + env(safe-area-inset-bottom));
+  background: #fff;
+}
+.consumer-screen.with-nav { background: #f7fbff; padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+.consumer-screen button { background: transparent; }
+.consumer-status { height: 42px; font-size: 14px; padding: 0 2px; }
+.consumer-topbar { grid-template-columns: 38px 1fr 38px; gap: 6px; margin-bottom: 10px; }
+.consumer-back,.consumer-icon-btn { width: 38px; height: 38px; min-height: 38px; background: transparent !important; }
+.consumer-title { font-size: 20px; letter-spacing: -.035em; line-height: 1.1; }
+.consumer-subtitle { font-size: 13px; margin-top: 4px; }
+.location-row { margin: 2px 0 6px; font-size: 13px; }
+.hospital-headline { text-align: left !important; font-size: 30px; line-height: 1.06; margin: 0; }
+.hospital-list-sub { font-size: 14px; margin: 6px 0 14px; }
+.hospital-search-row { grid-template-columns: 1fr 92px; gap: 10px; margin-bottom: 13px; }
+.hospital-search,.filter-button { min-height: 50px; border-radius: 12px; box-shadow: 0 8px 18px rgba(9,36,87,.035); }
+.hospital-search { justify-content: flex-start; text-align: left; padding: 0 14px; font-size: 12px; }
+.filter-button { background: #fff !important; font-size: 13px; }
+.specialty-row { display: grid; grid-auto-flow: column; grid-auto-columns: 76px; grid-template-columns: none; gap: 8px; overflow-x: auto; margin-bottom: 9px; scrollbar-width: none; }
+.specialty-row::-webkit-scrollbar { display: none; }
+.specialty-pill { min-height: 66px; border-radius: 12px; box-shadow: 0 8px 18px rgba(9,36,87,.035); font-size: 10.5px; gap: 5px; padding: 6px; background: #fff !important; }
+.specialty-pill.active { background: #eef5ff !important; }
+.specialty-pill svg { width: 22px; height: 22px; }
+.results-sort-row { margin: 10px 0 9px; font-size: 12px; }
+.hospital-card-list { gap: 10px; }
+.hospital-list-card { grid-template-columns: 122px 1fr; gap: 10px; padding: 10px; border-radius: 15px; min-height: 148px; box-shadow: 0 8px 22px rgba(10,32,71,.055); background: #fff !important; }
+.hospital-card-image { height: 122px; border-radius: 12px; }
+.open-badge { left: 6px; bottom: 6px; padding: 4px 8px; font-size: 10px; }
+.hospital-list-info { min-height: 124px; padding-right: 22px; padding-bottom: 40px; position: relative; text-align: left !important; }
+.hospital-like { right: 0; top: 0; width: 18px; height: 18px; }
+.hospital-list-info h3 { font-size: 16px; line-height: 1.12; margin: 0 0 6px; }
+.rating-line { font-size: 11.5px; margin-bottom: 5px; gap: 4px; }
+.meta-line { font-size: 10.5px; margin-bottom: 5px; line-height: 1.2; gap: 4px; }
+.meta-line svg { width: 12px; height: 12px; }
+.card-book-btn { position: absolute; right: 0; bottom: 0; min-height: 36px; height: 36px; border-radius: 10px; padding: 0 12px; font-size: 12px; background: #0b66f6 !important; color:#fff; }
+.trust-strip { bottom: calc(58px + env(safe-area-inset-bottom)); max-width: 430px; }
+.trust-strip div { min-height: 52px; padding: 8px; grid-template-columns: 25px 1fr; }
+.trust-strip strong { font-size: 10.5px; }
+.trust-strip span { font-size: 9px; }
+.consumer-bottom-nav { height: calc(58px + env(safe-area-inset-bottom)); max-width: 430px; background: #fff; }
+.consumer-bottom-nav button { background: transparent !important; border: 0 !important; border-radius: 0 !important; color: #667085; font-size: 10px; min-height: 48px; }
+.consumer-bottom-nav button.active { color:#0b66f6; }
+.consumer-bottom-nav svg { width: 20px; height: 20px; }
+
+.hospital-detail-hero { grid-template-columns: 150px 1fr; gap: 14px; align-items: start; }
+.detail-photo { height: 188px; border-radius: 15px; }
+.photo-count { padding: 6px 8px; font-size: 10px; left: 8px; bottom: 8px; }
+.detail-name { font-size: 26px; line-height: 1.05; margin: 6px 0 8px; }
+.detail-meta { font-size: 12px; line-height: 1.35; margin: 7px 0; gap: 6px; }
+.detail-feature-row { grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 15px 0; }
+.detail-feature { min-height: 58px; border-radius: 12px; font-size: 9.5px; background: #f5f7fb !important; text-align: center; }
+.detail-feature svg { width: 19px; height: 19px; }
+.verified-card { border-radius: 13px; padding: 12px; grid-template-columns: 34px 1fr 18px; font-size: 13px; }
+.about-block { margin-top: 18px; padding-bottom: 16px; }
+.about-block h2,.slots-block h2 { font-size: 18px; margin-bottom: 7px; }
+.about-block p { font-size: 12px; line-height: 1.45; }
+.slots-block { margin-top: 18px; padding-bottom: 86px; }
+.slots-header p { font-size: 11px; }
+.calendar-link { font-size: 12px; }
+.date-row { grid-auto-columns: 60px; gap: 8px; padding-bottom: 10px; }
+.date-chip { min-height: 62px; border-radius: 10px; font-size: 10.5px; background:#fff !important; }
+.slot-section-title { margin: 14px 0 9px; font-size: 12px; }
+.slot-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 8px; }
+.slot-pill { min-height: 38px; height: 38px; border-radius: 8px; font-size: 11.5px; background:#fff !important; }
+.slot-pill.selected { background:#079455 !important; color:#fff; }
+.next-slot { margin-top: 14px; border-radius: 12px; padding: 12px; font-size: 12px; }
+.booking-bottom-bar { grid-template-columns: 120px 1fr; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); max-width: 430px; }
+.booking-bottom-bar strong { font-size: 12px; }
+.booking-bottom-bar span { font-size: 10px; }
+.primary-cta { min-height: 52px; border-radius: 11px; background:#0b66f6 !important; color:#fff; font-size: 15px; }
+.primary-cta.green { background:#079455 !important; }
+
+.stepper { width: 78%; margin: 10px auto 24px; }
+.appointment-summary-card { grid-template-columns: 106px 1fr; gap: 12px; padding: 12px; border-radius: 15px; margin-bottom: 18px; }
+.summary-photo { height: 106px; border-radius: 12px; }
+.summary-heading h2 { font-size: 16px; }
+.status-chip { padding: 6px 9px; font-size: 10px; }
+.summary-grid { margin-top: 12px; }
+.summary-grid strong { font-size: 11px; }
+.summary-grid span { font-size: 10px; }
+.summary-grid svg { width: 18px; height: 18px; }
+.form-card,.confirm-card,.success-card,.note-card,.secure-strip,.help-strip { border-radius: 15px; box-shadow: 0 8px 22px rgba(10,32,71,.045); }
+.form-card { padding: 15px; margin-bottom: 14px; }
+.form-title-row h2,.confirm-section-head h2 { font-size: 18px; }
+.form-title-icon { width: 38px; height: 38px; border-radius: 11px; }
+.field-label { margin: 12px 0 7px; font-size: 12px; }
+.input-box { min-height: 48px; border-radius: 9px; }
+.gender-row { gap: 10px; }
+.gender-card { min-height: 54px; background:#fff !important; font-size: 12px; }
+.gender-card.active { background:#f3f8ff !important; }
+.security-inline { padding: 12px; border-radius: 11px; font-size: 12px; }
+.sticky-summary { margin-left:-16px; margin-right:-16px; margin-bottom:-22px; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; }
+.sticky-summary-info { gap: 12px; margin-bottom: 14px; }
+.sticky-summary-info h4 { font-size: 13px; }
+.sticky-summary-info p { font-size: 11px; }
+.total-free { font-size: 20px; }
+.confirm-hospital-card { grid-template-columns: 104px 1fr; gap: 12px; padding: 12px; margin-bottom: 18px; }
+.confirm-hospital-card img { width: 104px; height: 104px; border-radius: 12px; }
+.confirm-hospital-card h2 { font-size: 22px; margin: 4px 0 6px; }
+.detail-row { font-size: 12px; padding: 11px 0; }
+.note-card { padding: 14px; margin-bottom: 18px; }
+.note-card h3 { font-size: 16px; }
+.note-card p { font-size: 12px; }
+.secure-footnote { font-size: 11px; }
+.success-hero { padding-top: 8px; }
+.success-check { width: 80px; height: 80px; margin-bottom: 15px; }
+.success-hero h1 { font-size: 24px; }
+.success-hero p { font-size: 13px; margin-bottom: 22px; }
+.success-hospital-card { grid-template-columns: 96px 1fr; gap: 12px; padding: 12px; }
+.success-hospital-card img { width: 96px; height: 96px; border-radius: 12px; }
+.success-hospital-card h2 { font-size: 18px; }
+.patient-tile { padding: 13px; }
+.important-card { padding: 14px; }
+.next-actions h2 { font-size: 20px; }
+.next-action-grid { gap: 8px; }
+.next-action { min-height: 86px; font-size: 11px; background:#fff !important; }
+.help-strip { padding: 12px; }
+@media (min-width: 431px) {
+  .consumer-screen { max-width: 430px; }
+}
+
+/* Compact hospital list density like the provided reference */
+.hospital-list-card { grid-template-columns: 112px 1fr; min-height: 128px; }
+.hospital-card-image { height: 112px; }
+.hospital-list-info { min-height: 112px; padding-bottom: 36px; }
+.hospital-list-info h3 { font-size: 15px; margin-bottom: 4px; }
+.rating-line { font-size: 10.5px; margin-bottom: 4px; }
+.meta-line { font-size: 9.6px; margin-bottom: 4px; }
+.card-book-btn { height: 34px; min-height: 34px; font-size: 11px; padding: 0 10px; }
+
+/* Isolation from LabTest global .step styles */
+.stepper .step {
+  flex: initial !important;
+  text-align: center !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #7d8799 !important;
+  display: grid !important;
+  justify-items: center !important;
+  gap: 8px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+.stepper .step.active { background: transparent !important; color:#0b66f6 !important; }
+.stepper .step span { width:34px !important; height:34px !important; border-radius:999px !important; display:grid !important; place-items:center !important; background:#f4f6fa !important; border:1px solid #d9e0ea !important; color:#7d8799 !important; }
+.stepper .step.active span { background:#0b66f6 !important; color:#fff !important; border-color:#0b66f6 !important; }
+.sticky-summary .primary-cta { width: 100%; }
+
+/* Book-slot card density correction */
+.appointment-summary-card { grid-template-columns: 90px 1fr !important; gap: 10px !important; padding: 10px !important; margin-top: -4px; margin-bottom: 16px !important; }
+.appointment-summary-card .summary-photo { height: 90px !important; border-radius: 11px; }
+.appointment-summary-card .summary-heading h2 { font-size: 15px !important; }
+.appointment-summary-card .status-chip { padding: 5px 8px; font-size: 9.5px; }
+.appointment-summary-card .meta-line { font-size: 10px; margin-bottom: 5px; }
+.appointment-summary-card .summary-grid { margin-top: 8px; }
+.appointment-summary-card .summary-grid svg { width: 16px; height: 16px; }
+.appointment-summary-card .summary-grid strong { font-size: 10px; }
+.appointment-summary-card .summary-grid span { font-size: 9px; }
+
+/* Confirm booking density + remove inherited button borders */
+.edit-link { border:0 !important; background:transparent !important; padding:0 !important; min-height:auto !important; }
+.confirm-card { padding: 14px !important; margin-bottom: 16px !important; }
+.confirm-section-head { margin-bottom: 10px !important; }
+.confirm-section-head h2 { font-size: 18px !important; }
+.confirm-section-head .form-title-icon { width: 34px; height: 34px; }
+.confirm-hospital-card { padding: 12px !important; grid-template-columns: 104px 1fr !important; gap: 12px !important; }
+.confirm-hospital-card img { width: 104px !important; height: 104px !important; }
+.confirm-hospital-card h2 { font-size: 20px !important; margin: 2px 0 5px !important; }
+.confirm-hospital-card .summary-grid { margin-top: 8px; }
+.confirm-hospital-card .summary-grid svg { width: 16px; height: 16px; }
+.confirm-hospital-card .summary-grid strong { font-size: 10px; }
+.confirm-hospital-card .summary-grid span { font-size: 9px; }
+.confirm-hospital-card .detail-meta { font-size: 11px; margin: 4px 0; }
+.confirm-card .detail-row { padding: 9px 0 !important; font-size: 12px !important; }
+.note-card { padding: 13px !important; margin-bottom: 16px !important; grid-template-columns: 26px 1fr !important; }
+.note-card h3 { font-size: 15px !important; margin-bottom: 6px !important; }
+.note-card p { font-size: 11px !important; margin: 4px 0 !important; }
+.consumer-screen > .primary-cta { width: 100%; }
+
+@media (max-width: 340px) {
+  .consumer-screen { padding-left: 14px; padding-right: 14px; }
+  .hospital-search-row { grid-template-columns: 1fr; }
+  .filter-button { min-height: 44px; }
+  .hospital-list-card { grid-template-columns: 96px 1fr; gap: 8px; padding: 9px; min-height: 116px; }
+  .hospital-card-image { height: 96px; }
+  .hospital-list-info { min-height: 98px; padding-bottom: 34px; }
+  .hospital-list-info h3 { font-size: 14px; }
+  .meta-line, .rating-line { font-size: 9px; }
+  .card-book-btn { height: 32px; min-height: 32px; font-size: 10px; padding: 0 8px; }
+  .hospital-detail-hero { grid-template-columns: 1fr; }
+  .detail-photo { height: 210px; }
+  .detail-feature-row { grid-template-columns: repeat(3, 1fr); }
+  .slot-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .booking-bottom-bar { grid-template-columns: 1fr; padding-left: 14px; padding-right: 14px; }
+  .appointment-summary-card,
+  .confirm-hospital-card,
+  .success-hospital-card { grid-template-columns: 86px 1fr !important; }
+  .appointment-summary-card .summary-photo,
+  .confirm-hospital-card img,
+  .success-hospital-card img { width: 86px !important; height: 86px !important; }
+  .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sticky-summary { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
+  .next-action-grid { grid-template-columns: 1fr; }
+}
+@media (min-width: 541px) {
+  .consumer-screen { border-left: 1px solid #edf0f6; border-right: 1px solid #edf0f6; }
+}
+
+/* Production polish for hospital list density */
+.consumer-screen { background: linear-gradient(180deg,#f7fbff 0%,#eef5ff 100%) !important; }
+.hospital-list-card, .confirm-card, .success-card, .appointment-summary-card { background:#fff !important; border:1px solid #e4ebf5 !important; box-shadow:0 14px 32px rgba(15,23,42,.05) !important; }
+.consumer-topbar { padding-top: calc(10px + env(safe-area-inset-top)) !important; }
+.consumer-title { color:#0b1d3a !important; }
+.hospital-search-row input, .hospital-search-row button { border-color:#e4ebf5 !important; background:#fff !important; box-shadow:0 10px 24px rgba(15,23,42,.04) !important; }
+.hospital-list-info h2 { font-size: 15px !important; line-height:1.15 !important; }
+.card-book-btn { background:#0b66f6 !important; color:#fff !important; font-weight:900 !important; }
+@media (max-width: 360px) { .hospital-list-card { grid-template-columns: 112px 1fr !important; gap:10px !important; padding:10px !important; } .hospital-thumb { width:112px !important; height:96px !important; } .hospital-list-info h2 { font-size:14px !important; } }

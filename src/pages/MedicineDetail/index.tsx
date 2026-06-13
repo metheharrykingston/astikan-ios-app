@@ -1,20 +1,49 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   FiArrowLeft,
   FiChevronDown,
   FiChevronUp,
-  FiMessageCircle,
   FiShoppingCart,
   FiStar,
 } from "react-icons/fi"
 import { useNavigate, useParams } from "react-router-dom"
-import { fetchPharmacyProducts } from "../../services/pharmacyApi"
-import { mapProductToMedicine, medicines, type MedicineItem } from "../Pharmacy/medicineData"
+import { fetchPharmacyProducts, lookupPharmacyProducts } from "../../services/pharmacyApi"
+import { findExternalMedicineById, mapProductToMedicine, medicines, readExternalMedicines, type MedicineItem } from "../Pharmacy/medicineData"
 import { useCart } from "../../app/cart"
 import { playAppSound } from "../../utils/sound"
 import "./medicine-detail.css"
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+
 type PanelId = "about" | "uses" | "dose"
+function normaliseMedicineKey(value?: string | null) {
+  if (!value) return ""
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      return value
+    }
+  })()
+  return decoded
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+function medicineKeys(item: MedicineItem) {
+  return [
+    item.id,
+    item.name,
+    `${item.name}-${item.dose}`,
+    `${item.name}-${item.kind}`,
+    item.genericName,
+  ]
+    .map(normaliseMedicineKey)
+    .filter(Boolean)
+}
 
 export default function MedicineDetail() {
   const navigate = useNavigate()
@@ -22,14 +51,25 @@ export default function MedicineDetail() {
   const [catalog, setCatalog] = useState<MedicineItem[]>([])
   const [loadingCatalog, setLoadingCatalog] = useState(true)
   const medicine = useMemo(() => {
-    const source = catalog.length ? catalog : medicines
-    return source.find((item) => item.id === medicineId)
+    const requestedKey = normaliseMedicineKey(medicineId)
+    const exactExternal = findExternalMedicineById(medicineId)
+    const source = [
+      ...catalog,
+      ...medicines,
+      ...readExternalMedicines(),
+    ]
+    const uniqueSource = Array.from(new Map(source.map((item) => [item.id, item])).values())
+    return (
+      exactExternal
+      ?? uniqueSource.find((item) => item.id === medicineId)
+      ?? uniqueSource.find((item) => medicineKeys(item).includes(requestedKey))
+    )
   }, [catalog, medicineId])
   const [openPanel, setOpenPanel] = useState<PanelId>("about")
   const [showCartPopup, setShowCartPopup] = useState(false)
   const [lastAddedName, setLastAddedName] = useState("")
   const [activeImage, setActiveImage] = useState(0)
-  const { addItem, totalItems } = useCart()
+  const { addItem, replaceCartWithItem, totalItems } = useCart()
   const doseRef = useRef<HTMLDivElement | null>(null)
 
   const upsells = useMemo(() => {
@@ -42,17 +82,26 @@ export default function MedicineDetail() {
     return [medicine.image, ...(medicine.images ?? [])].filter(Boolean)
   }, [medicine])
 
-  const primaryAddress = localStorage.getItem("employee_primary_address") ?? "Home"
 
   useEffect(() => {
     let active = true
     async function loadCatalog() {
       setLoadingCatalog(true)
       try {
-        const rows = await fetchPharmacyProducts({ limit: 40, audience: "employee" })
+        if (medicineId && UUID_RE.test(medicineId)) {
+          const exact = await lookupPharmacyProducts([medicineId], "employee")
+          if (!active) return
+          if (exact?.length) {
+            setCatalog(exact.map((row) => mapProductToMedicine(row)))
+            return
+          }
+        }
+
+        const searched = medicineId ? await fetchPharmacyProducts({ search: medicineId, limit: 5, audience: "employee" }).catch(() => []) : []
+        const rows = searched?.length ? searched : await fetchPharmacyProducts({ limit: 120, audience: "employee" })
         if (!active) return
         if (rows?.length) {
-          setCatalog(rows.map((row, index) => mapProductToMedicine(row, index)))
+          setCatalog(rows.map((row) => mapProductToMedicine(row)))
         } else {
           setCatalog([])
         }
@@ -66,7 +115,7 @@ export default function MedicineDetail() {
     return () => {
       active = false
     }
-  }, [])
+  }, [medicineId])
 
   useEffect(() => {
     if (!showCartPopup) return
@@ -111,16 +160,9 @@ export default function MedicineDetail() {
 
   function handleBuyNow() {
     if (!currentMedicine.inStock) return
-    addItem(currentMedicine)
-    playAppSound("notify")
-    navigate("/cart")
-  }
-
-  function focusDose() {
-    setOpenPanel("dose")
-    window.setTimeout(() => {
-      doseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-    }, 50)
+    replaceCartWithItem(currentMedicine, 1)
+    playAppSound("tap")
+    navigate("/pharmacy/checkout", { state: { buyNowMedicineId: currentMedicine.id } })
   }
 
   return (
@@ -171,9 +213,15 @@ export default function MedicineDetail() {
                 <h2>{currentMedicine.name}</h2>
                 <span className="medicine-title-dose">{currentMedicine.dose}</span>
               </div>
-              <span className="availability in">In 5 mins</span>
+              <span className={`availability ${currentMedicine.inStock ? "in" : "out"}`}>
+                {currentMedicine.inStock ? "In stock" : "Currently unavailable"}
+              </span>
             </div>
             <p>{currentMedicine.kind}</p>
+
+            <div className="medicine-price-block">
+              <strong>₹{Math.round(currentMedicine.sellingPrice ?? currentMedicine.price ?? 0)}</strong>
+            </div>
 
             <div className="hero-facts">
               <article>
@@ -186,21 +234,11 @@ export default function MedicineDetail() {
               </article>
               <article>
                 <small>Brand</small>
-                <strong>{currentMedicine.name}</strong>
+                <strong>{currentMedicine.manufacturer || currentMedicine.name}</strong>
               </article>
             </div>
           </div>
         </article>
-
-        <section className="insight-strip app-fade-stagger">
-          <div className="delivery-banner">
-            <div>
-              <h4>Delivery in 15 mins</h4>
-              <p>Delivering to {primaryAddress}</p>
-            </div>
-            <span className="delivery-badge">Fast</span>
-          </div>
-        </section>
 
         <article className={`medicine-section app-fade-stagger ${openPanel === "about" ? "expanded" : "collapsed"}`}>
           <button className="section-toggle app-pressable" type="button" onClick={() => togglePanel("about")}>
@@ -262,37 +300,7 @@ export default function MedicineDetail() {
           </div>
         </section>
 
-        <section className="medicine-action-grid app-fade-stagger">
-          <button
-            className="cta-secondary app-pressable"
-            type="button"
-            onClick={() =>
-              navigate("/ai-chat", {
-                state: { prefill: `Can you explain ${currentMedicine.name} ${currentMedicine.dose} dose schedule and precautions for me?` },
-              })
-            }
-          >
-            <FiMessageCircle /> Ask AI About This Medicine & Dose
-          </button>
-        </section>
       </section>
-
-      <div className="medicine-chat-bar app-fade-stagger">
-        <button
-          className="chat-bar-btn app-pressable"
-          type="button"
-          onClick={() =>
-            navigate("/ai-chat", {
-              state: { prefill: `Can you explain ${currentMedicine.name} ${currentMedicine.dose} dose schedule and precautions for me?` },
-            })
-          }
-        >
-          <FiMessageCircle /> Ask AI
-        </button>
-        <button className="chat-bar-btn ghost app-pressable" type="button" onClick={focusDose}>
-          Dose guidance
-        </button>
-      </div>
 
       {showCartPopup && (
         <button
@@ -328,5 +336,3 @@ export default function MedicineDetail() {
     </main>
   )
 }
-
-

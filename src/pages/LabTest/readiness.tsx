@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { FiArrowLeft } from "react-icons/fi"
 import { useLocation, useNavigate } from "react-router-dom"
-import { getAiLabReadinessQuestions, type ReadinessQuestion } from "../../services/aiApi"
+import { consumeVoiceAutomation, subscribeVoiceAutomation } from "../../app/voiceAutomation"
+import type { ReadinessQuestion } from "../../services/aiApi"
+import { buildStaticReadinessQuestions } from "../../services/labApi"
 import "./labtest.css"
 
 type LabTestItem = {
@@ -33,62 +35,13 @@ export default function LabReadinessStep() {
   const [answers, setAnswers] = useState<ReadinessState>({})
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
-
   useEffect(() => {
-    let active = true
-    if (state?.readinessQuestions?.length === 3) {
-      setLoading(false)
-      return () => {
-        active = false
-      }
-    }
-    setLoading(true)
-
-    getAiLabReadinessQuestions({
-      testName: selectedTest?.name ?? "Lab Test",
-      fastingInfo: selectedTest?.fasting,
-    })
-      .then((data) => {
-        if (!active) return
-        setQuestions(data.questions)
-      })
-      .catch(() => {
-        if (!active) return
-        setQuestions([
-          {
-            id: "q1",
-            question: "Have you followed the preparation guidance for this test?",
-            options: [
-              { value: "yes", label: "Yes, I followed it" },
-              { value: "no", label: "No, not yet" },
-            ],
-          },
-          {
-            id: "q2",
-            question: "Did you take any medicine today that should be shared with the lab?",
-            options: [
-              { value: "yes", label: "Yes, I took medicine" },
-              { value: "no", label: "No, none today" },
-            ],
-          },
-          {
-            id: "q3",
-            question: "Are you comfortable and ready for collection now?",
-            options: [
-              { value: "yes", label: "Yes, ready now" },
-              { value: "no", label: "No, I need support" },
-            ],
-          },
-        ])
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [selectedTest?.fasting, selectedTest?.name])
+    const staticQuestions = state?.readinessQuestions?.length
+      ? state.readinessQuestions
+      : buildStaticReadinessQuestions(selectedTest?.name ?? "Lab Test", selectedTest?.fasting ?? "")
+    setQuestions(staticQuestions)
+    setLoading(false)
+  }, [selectedTest?.fasting, selectedTest?.name, state?.readinessQuestions])
 
   const currentQuestion = useMemo(
     () => (questions.length > 0 ? questions[currentIndex] : null),
@@ -114,6 +67,17 @@ export default function LabReadinessStep() {
     setCurrentIndex((prev) => prev + 1)
   }
 
+  useEffect(() => {
+    function applyVoiceAnswer() {
+      const command = consumeVoiceAutomation("lab-readiness-answer")
+      if (!command) return
+      onAnswer(command.payload.answer)
+    }
+
+    applyVoiceAnswer()
+    return subscribeVoiceAutomation(applyVoiceAnswer)
+  }, [currentQuestion, currentIndex, answers, questions, selectedTest])
+
   return (
     <div className="lab-page readiness-page">
       <div className="lab-header">
@@ -132,13 +96,11 @@ export default function LabReadinessStep() {
       </div>
 
       <div className="lab-steps">
-        <div className="step done">1. Tests</div>
-        <span>-</span>
-        <div className="step active">Readiness</div>
+        <div className="step active">1. Readiness</div>
         <span>-</span>
         <div className="step pending">2. Location</div>
         <span>-</span>
-        <div className="step pending">3. Schedule</div>
+        <div className="step pending">3. Confirm</div>
       </div>
 
       <section className="readiness-wrap">

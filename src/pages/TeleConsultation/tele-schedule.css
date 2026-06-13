@@ -287,6 +287,60 @@
   opacity: 0.55;
 }
 
+.tele-payment-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.tele-payment-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #4c5b7a;
+  font-weight: 600;
+}
+
+.tele-payment-line strong {
+  color: #172447;
+}
+
+.tele-payment-line.total {
+  padding-top: 10px;
+  border-top: 1px dashed #d9ddf0;
+}
+
+.payment-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.payment-pill {
+  border: 1px solid #d7dcff;
+  background: #fff;
+  color: #243b7f;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+.payment-pill.active {
+  border-color: transparent;
+  background: linear-gradient(140deg, #7a2d75, #9a4b93);
+  color: #fff;
+}
+
+.tele-payment-error {
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(196, 52, 52, 0.08);
+  border: 1px solid rgba(196, 52, 52, 0.18);
+  color: #a52a2a;
+  font-weight: 700;
+}
+
 @media (max-width: 420px) {
   .tele-doctor-hero-card {
     grid-template-columns: 1fr 120px;

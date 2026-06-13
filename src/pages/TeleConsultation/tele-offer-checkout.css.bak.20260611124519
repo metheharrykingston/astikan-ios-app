@@ -1,0 +1,261 @@
+.tele-offer-page {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 153, 102, 0.16), transparent 30%),
+    linear-gradient(180deg, #fffaf7 0%, #fff 54%, #fffaf6 100%);
+  color: #1f2435;
+}
+
+.tele-offer-header {
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 18px 18px 8px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.tele-offer-back {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 26px rgba(255, 116, 54, 0.1);
+  display: grid;
+  place-items: center;
+  color: #1f2940;
+}
+
+.tele-offer-header h1 {
+  margin: 0;
+  font: 800 1.16rem "Satoshi", sans-serif;
+}
+
+.tele-offer-header p {
+  margin: 4px 0 0;
+  color: #7d7272;
+  font-size: 0.92rem;
+}
+
+.tele-offer-shell {
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 10px 18px calc(30px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 18px;
+}
+
+.tele-offer-hero,
+.tele-offer-included,
+.tele-offer-security,
+.tele-offer-footer {
+  border-radius: 28px;
+  border: 1px solid rgba(242, 233, 227, 0.95);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 18px 38px rgba(255, 126, 66, 0.08);
+}
+
+.tele-offer-hero {
+  padding: 0;
+  overflow: hidden;
+}
+
+.tele-offer-hero-frame {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tele-offer-included {
+  padding: 18px 18px 14px;
+}
+
+.tele-offer-included h3,
+.tele-offer-security h3 {
+  margin: 0;
+  font: 800 1.08rem "Satoshi", sans-serif;
+}
+
+.tele-offer-feature-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tele-offer-feature-card {
+  padding: 6px 12px 14px;
+  display: grid;
+  gap: 10px;
+  border-right: 1px solid #eef1f7;
+}
+
+.tele-offer-feature-card:last-child {
+  border-right: 0;
+}
+
+.tele-offer-feature-card span {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+}
+
+.tele-offer-feature-card strong {
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.tele-offer-feature-card.blue span {
+  background: #edf4ff;
+  color: #4b87ff;
+}
+
+.tele-offer-feature-card.mint span {
+  background: #eafcf4;
+  color: #2cb97a;
+}
+
+.tele-offer-feature-card.purple span {
+  background: #f3ecff;
+  color: #a065ff;
+}
+
+.tele-offer-feature-card.peach span {
+  background: #fff1ed;
+  color: #ff7449;
+}
+
+.tele-offer-security {
+  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  background: linear-gradient(180deg, #f7fbff 0%, #f4f8ff 100%);
+}
+
+.tele-offer-security-copy {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.tele-offer-security-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #edf4ff;
+  color: #4081f7;
+}
+
+.tele-offer-security-copy p {
+  margin: 6px 0 0;
+  color: #74809a;
+  line-height: 1.5;
+}
+
+.tele-offer-security-arrow {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #2e5ee6;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 18px rgba(56, 97, 217, 0.1);
+}
+
+.tele-offer-security-chevron {
+  transform: rotate(180deg);
+}
+
+.tele-offer-benefit-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  color: #69758d;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tele-offer-benefit-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tele-offer-benefit-strip svg,
+.tele-offer-foot-note svg {
+  color: #2bbf73;
+}
+
+.tele-offer-error {
+  margin: 0;
+  color: #d23944;
+  font-weight: 700;
+}
+
+.tele-offer-footer {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tele-offer-primary {
+  width: 100%;
+  min-height: 58px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ff7f31 0%, #ff5a1f 100%);
+  color: #fff;
+  font: 800 1rem "Satoshi", sans-serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-shadow: 0 22px 34px rgba(255, 103, 34, 0.24);
+}
+
+.tele-offer-primary:disabled {
+  opacity: 0.72;
+}
+
+.tele-offer-foot-note {
+  margin: 14px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #74809a;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 390px) {
+  .tele-offer-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .tele-offer-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .tele-offer-feature-card {
+    border-right: 0;
+    border: 1px solid #eef1f7;
+    border-radius: 18px;
+  }
+
+  .tele-offer-copy h2 {
+    font-size: 1.7rem;
+  }
+}

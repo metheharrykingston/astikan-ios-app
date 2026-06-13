@@ -1,0 +1,59 @@
+import { apiPost } from './api'
+
+type UserBootstrapResponse = {
+  companyId: string
+  userId: string
+  userCode: string
+  employeeUserId: string
+  employeeCode: string
+  email: string
+  phone?: string
+}
+
+const USER_ACTOR_KEY = 'astikan_user_actor'
+
+export async function ensureUserActor(input: {
+  companyReference?: string
+  companyName?: string
+  email?: string
+  phone?: string
+  fullName?: string
+  handle?: string
+  userCode?: string
+  employeeCode?: string
+}) {
+  const sessionRaw = sessionStorage.getItem(USER_ACTOR_KEY)
+  const localRaw = localStorage.getItem(USER_ACTOR_KEY)
+  const raw = sessionRaw ?? localRaw
+  if (raw) {
+    try {
+      const actor = JSON.parse(raw) as UserBootstrapResponse
+      if (!sessionRaw) {
+        sessionStorage.setItem(USER_ACTOR_KEY, JSON.stringify(actor))
+      }
+      if (localRaw) {
+        localStorage.removeItem(USER_ACTOR_KEY)
+      }
+      return actor
+    } catch {
+      sessionStorage.removeItem(USER_ACTOR_KEY)
+      localStorage.removeItem(USER_ACTOR_KEY)
+    }
+  }
+
+  const actor = await apiPost<UserBootstrapResponse, typeof input>('/users/bootstrap', input)
+  sessionStorage.setItem(USER_ACTOR_KEY, JSON.stringify(actor))
+  return actor
+}
+
+export const ensureEmployeeActor = ensureUserActor
+
+export async function ensureDoctorActor(input: {
+  email?: string
+  phone?: string
+  fullName?: string
+  handle?: string
+  specialization?: string
+}) {
+  return apiPost<{ userId: string; email: string; fullName: string }, typeof input>('/doctors/bootstrap', input)
+}

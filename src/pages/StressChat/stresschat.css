@@ -62,7 +62,7 @@
 .stress-content {
   flex: 1;
   overflow-y: auto;
-  padding: 86px 0 108px;
+  padding: 86px 0 24px;
 }
 
 .calm-hero {
@@ -228,6 +228,13 @@
   padding: 10px;
 }
 
+.ritual-card p {
+  margin: 8px 0 0;
+  color: #5f6980;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
 .ritual-head {
   display: flex;
   align-items: center;
@@ -249,169 +256,10 @@
   color: #202a3d;
 }
 
-.ritual-track {
-  margin-top: 9px;
-  height: 8px;
-  border-radius: 999px;
-  background: #e8edf7;
-  overflow: hidden;
-}
-
-.ritual-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #7a67ff, #9b8dff);
-  animation: flow 2200ms ease-in-out infinite;
-}
-
-.chat-area {
-  padding: 16px;
-}
-
-.chat-bubble {
-  background: #fff;
-  border-radius: 20px;
-  padding: 14px;
-  font-size: 0.88rem;
-  line-height: 1.55;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  margin-bottom: 8px;
-}
-
-.chat-bubble.user {
-  background: #f0f5ff;
-  border: 1px solid #d9e3ff;
-}
-
-.time {
-  margin-top: 8px;
-  font-size: 0.72rem;
-  color: #9ca3af;
-}
-
-.stress-input {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin: 0 auto;
-  width: min(100%, var(--app-frame-width));
-  z-index: 16;
-  padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid #e5e7eb;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
-  display: flex;
-  gap: 8px;
-}
-
-.input-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 0;
-  background: #eef2ff;
-  color: #5f57df;
-  display: grid;
-  place-items: center;
-}
-
-.stress-input input {
-  flex: 1;
-  padding: 12px 16px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  outline: none;
-}
-
-.send-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #c084fc, #ec4899);
-  color: #fff;
-  border: none;
-  display: grid;
-  place-items: center;
-}
-
-.voice-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  background: rgba(17, 24, 39, 0.45);
-  display: grid;
-  align-items: end;
-}
-
-.voice-sheet {
-  width: min(100vw, 430px);
-  margin: 0 auto;
-  border-top-left-radius: 18px;
-  border-top-right-radius: 18px;
-  background: #f8f2fb;
-  padding: 16px;
-  border-top: 1px solid #e6d9ed;
-}
-
-.voice-sheet h4 {
-  margin: 0;
-  font-family: "Satoshi", sans-serif;
-  font-size: 1.08rem;
-  color: #5f2a70;
-}
-
-.voice-sheet p {
-  margin: 4px 0 12px;
-  color: #6e6781;
-  font-size: 0.86rem;
-}
-
-.voice-bars {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.voice-bars span {
-  height: 34px;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #b166ca, #6e2d82);
-  animation: voice 950ms ease-in-out infinite;
-}
-
-.voice-bars span:nth-child(2) {
-  animation-delay: 90ms;
-}
-
-.voice-bars span:nth-child(3) {
-  animation-delay: 180ms;
-}
-
-.voice-bars span:nth-child(4) {
-  animation-delay: 270ms;
-}
-
-.voice-bars span:nth-child(5) {
-  animation-delay: 360ms;
-}
-
-.stop-voice {
-  width: 100%;
-  border: 0;
-  border-radius: 12px;
-  min-height: 44px;
-  background: #6b2a83;
-  color: #fff;
-  font-weight: 700;
-}
-
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(21, 24, 40, 0.48);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -457,12 +305,14 @@
   margin: 16px 0 4px;
   font-size: 1.15rem;
   font-family: "Satoshi", sans-serif;
+  color: #1f2940;
 }
 
 .overlay-sub {
-  margin: 0;
+  margin: 0 0 4px;
   color: #6b7280;
   font-size: 0.9rem;
+  text-align: center;
 }
 
 .sleep-sheet {
@@ -513,6 +363,26 @@
   color: #64748b;
 }
 
+.sleep-audio-card {
+  margin-top: 12px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #f8f7ff, #eef4ff);
+  padding: 12px;
+}
+
+.sleep-audio-card strong {
+  display: block;
+  color: #1f2940;
+  margin-bottom: 4px;
+}
+
+.sleep-audio-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
 .sleep-record-btn {
   border: 0;
   border-radius: 10px;
@@ -527,6 +397,10 @@
 
 .sleep-record-btn:disabled {
   opacity: 0.5;
+}
+
+.stress-inline-actions {
+  justify-content: center;
 }
 
 .sleep-history {

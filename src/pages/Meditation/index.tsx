@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import { FiArrowLeft } from "react-icons/fi"
 import { useNavigate } from "react-router-dom"
+import { armAudioContext, startAmbientTrack, stopAmbientTrack } from "../../utils/sound"
 import "./meditation.css"
 
 export default function Meditation() {
   const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraError, setCameraError] = useState("")
+  const [soundOn, setSoundOn] = useState(false)
 
   useEffect(() => {
     let stream: MediaStream | null = null
@@ -22,6 +24,7 @@ export default function Meditation() {
     }
     startCamera()
     return () => {
+      stopAmbientTrack()
       if (stream) {
         stream.getTracks().forEach((track) => track.stop())
       }
@@ -57,6 +60,22 @@ export default function Meditation() {
         <div className="meditation-instructions">
           <h3>AI Coach</h3>
           <p>Take a slow breath in. Hold for a moment. Exhale gently. Let your mind settle.</p>
+          <button
+            type="button"
+            className="meditation-sound-btn app-pressable"
+            onClick={() => {
+              armAudioContext()
+              if (soundOn) {
+                stopAmbientTrack()
+                setSoundOn(false)
+                return
+              }
+              startAmbientTrack("meditation")
+              setSoundOn(true)
+            }}
+          >
+            {soundOn ? "Pause calming audio" : "Play calming audio"}
+          </button>
           <ul>
             <li>Keep your chin slightly down</li>
             <li>Unclench your jaw and relax your shoulders</li>

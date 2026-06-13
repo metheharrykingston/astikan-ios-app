@@ -5,9 +5,8 @@ const items = [
   { title: "Profile Information", desc: "Name, email, phone", to: "/profile-info" },
   { title: "Health Information", desc: "Vitals and history", to: "/health-info" },
   { title: "Address", desc: "Home and office", to: "/address" },
-  { title: "Bookings", desc: "Current and past", to: "/bookings" },
-  { title: "Reports", desc: "Lab, consultation, manuals", to: "/reports" },
-  { title: "Notifications", desc: "Alerts and reminders", to: "/notifications" },
+  { title: "Orders & Bookings", desc: "Medicine orders and lab bookings", to: "/bookings" },
+  { title: "Reports", desc: "Invoices, bills, health reports", to: "/reports" },
 ]
 
 export default function AccountSettings() {

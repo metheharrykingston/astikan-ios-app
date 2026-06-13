@@ -13,11 +13,11 @@
   margin: 0 auto;
   width: min(100%, var(--app-frame-width));
   z-index: 20;
-  min-height: 74px;
+  min-height: calc(74px + env(safe-area-inset-top));
   border-bottom: 1px solid #dfe5f1;
   background: rgba(244, 247, 252, 0.96);
   backdrop-filter: blur(10px);
-  padding: 12px 14px;
+  padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -69,7 +69,7 @@
 .notif-shell {
   width: min(100%, var(--app-frame-width));
   margin: 0 auto;
-  padding: 88px 14px 20px;
+  padding: calc(88px + env(safe-area-inset-top)) 14px 20px;
 }
 
 .notif-live-card {
@@ -229,3 +229,8 @@
   font-weight: 700;
   padding: 0 10px;
 }
+
+.notif-empty-card { min-height:220px; border-radius:24px; background:#fff; border:1px solid #edf2f7; display:grid; place-items:center; text-align:center; padding:30px 18px; color:#667085; box-shadow:0 14px 32px rgba(15,23,42,.05); }
+.notif-empty-card svg { width:42px; height:42px; color:#98a2b3; }
+.notif-empty-card h2 { margin:12px 0 4px; color:#101828; font-family:"Satoshi"; }
+.notif-empty-card p { margin:0; font-weight:700; }

@@ -2,15 +2,16 @@ import { useEffect, useState } from "react"
 import { FiArrowLeft, FiChevronRight } from "react-icons/fi"
 import { useLocation, useNavigate } from "react-router-dom"
 import { fetchPharmacyCategories, type PharmacyCategory } from "../../services/pharmacyApi"
+import { getPharmacyCategoryIcon } from "../Pharmacy/categoryIcons"
 import "./pharmacy-categories.css"
 
 const categories = [
-  { id: "nutritional", name: "Nutritional Drinks", icon: "🥤", desc: "Protein, immunity and recovery drinks" },
-  { id: "ayurveda", name: "Ayurveda", icon: "🌿", desc: "Herbal and traditional wellness products" },
-  { id: "vitamins", name: "Vitamins & Supplement", icon: "💊", desc: "Daily nutrition and support capsules" },
-  { id: "devices", name: "Devices", icon: "🩺", desc: "BP monitor, thermometer and glucometer" },
-  { id: "skincare", name: "Skin Care", icon: "🧴", desc: "Creams, gels and treatment essentials" },
-  { id: "personal", name: "Personal Care", icon: "🧼", desc: "Daily hygiene and self-care products" },
+  { id: "nutritional", name: "Nutritional Drinks", icon: getPharmacyCategoryIcon("Nutritional Drinks"), desc: "Protein, immunity and recovery drinks" },
+  { id: "ayurveda", name: "Ayurveda", icon: getPharmacyCategoryIcon("Ayurveda"), desc: "Herbal and traditional wellness products" },
+  { id: "vitamins", name: "Vitamins & Supplement", icon: getPharmacyCategoryIcon("Vitamins & Supplement"), desc: "Daily nutrition and support capsules" },
+  { id: "devices", name: "Devices", icon: getPharmacyCategoryIcon("Devices"), desc: "BP monitor, thermometer and glucometer" },
+  { id: "skincare", name: "Skin Care", icon: getPharmacyCategoryIcon("Skin Care"), desc: "Creams, gels and treatment essentials" },
+  { id: "personal", name: "Personal Care", icon: getPharmacyCategoryIcon("Personal Care"), desc: "Daily hygiene and self-care products" },
 ]
 
 export default function PharmacyCategories() {
@@ -41,10 +42,10 @@ export default function PharmacyCategories() {
   }, [])
 
   const visibleCategories = liveCategories.length
-    ? liveCategories.map((item) => ({
+      ? liveCategories.map((item) => ({
         id: item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
         name: item.name,
-        icon: "💊",
+        icon: getPharmacyCategoryIcon(item.name),
         desc: `${item.count} items`,
       }))
     : categories

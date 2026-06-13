@@ -1,80 +1,71 @@
-import { type ReactElement, useEffect, useMemo, useRef, useState } from "react"
+import { type CSSProperties, type ReactElement, useEffect, useMemo, useRef, useState } from "react"
 import {
   FiActivity,
-  FiAward,
   FiBatteryCharging,
   FiBell,
-  FiCreditCard,
   FiDroplet,
   FiHeart,
-  FiHome,
   FiMapPin,
-  FiMessageCircle,
+  FiCreditCard,
   FiMoon,
   FiPackage,
-  FiPhoneCall,
   FiShield,
   FiSmile,
   FiThermometer,
   FiTruck,
-  FiUser,
   FiZap,
 } from "react-icons/fi"
-import { useLocation, useNavigate } from "react-router-dom"
-import { getEmployeeAuthSession, getEmployeeCompanySession } from "../../services/authApi"
-import { logBehaviorSignal } from "../../services/behaviorApi"
-import { fetchUnreadCount } from "../../services/notificationCenter"
+import { FaHospital, FaPills, FaStethoscope } from "react-icons/fa"
+import { useNavigate } from "react-router-dom"
+import { getEmployeeAuthSession } from "../../services/authApi"
+import { getAddressProfile } from "../../services/addressApi"
+import { syncAddressCache } from "../../services/addressStore"
+import { addNotification, fetchUnreadCount } from "../../services/notificationCenter"
 import { preloadLabCatalog } from "../../services/labApi"
+import { getLabOfferStatus, submitLabOfferAnswers, type LabOfferStatus } from "../../services/labOfferApi"
+import { getTeleconsultOfferStatus, unlockTeleconsultOffer } from "../../services/teleconsultOfferApi"
+import { getTeleconsultPaidAccessStatus, type TeleconsultPaidAccessStatus } from "../../services/teleconsultPaidApi"
 import { getLatestVital } from "../../services/vitalsApi"
-import { fetchDailyTips, type DailyTipPayload } from "../../services/newsApi"
-import { fetchWeather, type WeatherSnapshot } from "../../services/weatherApi"
-import { healthTips, type HealthTip } from "../../data/healthTips"
-import warningAlarm from "../../assets/audio/warning.mp3"
+import AppBottomNav from "../../components/AppBottomNav"
 import "./home.css"
 
 
 type QuickAccessItem = {
   title: string
   subtitle?: string
-  tone: "purple" | "blue" | "indigo" | "orange" | "green" | "gold"
+  tone: "purple" | "red" | "blue" | "indigo" | "orange" | "green" | "gold"
   badge?: string
-  icon: "stress" | "lab" | "consult" | "weekend" | "pharmacy" | "badges"
-}
-
-type MetricId = "heart-rate" | "blood-pressure" | "calories" | "sugar"
-
-const tabs = [
-  { id: "Home", icon: "home" },
-  { id: "Health", icon: "health" },
-  { id: "Doctor Chat", icon: "chat" },
-  { id: "Stress Relief", icon: "stress" },
-  { id: "Wallet", icon: "wallet" },
-] as const
-
-const tabRoutes: Record<(typeof tabs)[number]["id"], string> = {
-  Home: "/home",
-  Health: "/health",
-  "Doctor Chat": "/ai-chat",
-  "Stress Relief": "/stress-relief",
-  Wallet: "/wallet",
+  icon: "stress" | "lab" | "consult" | "pharmacy" | "insurance"   | "hospital" | "finance"
 }
 
 const quickAccess: QuickAccessItem[] = [
-  { title: "Stress", subtitle: "Calm chat", tone: "purple", badge: "New", icon: "stress" },
+  { title: "Insurance", subtitle: "Coming soon", tone: "blue", icon: "insurance" },
   { title: "Lab Test", subtitle: "Fast slots", tone: "blue", icon: "lab" },
-  { title: "Consult", subtitle: "AI + OPD", tone: "indigo", icon: "consult" },
-  { title: "Tasks", subtitle: "Earn points", tone: "orange", icon: "weekend" },
-  { title: "Pharma", subtitle: "Meds refill", tone: "green", icon: "pharmacy" },
-  { title: "Badges", subtitle: "Your level", tone: "gold", badge: "#42", icon: "badges" },
+  { title: "Doctor", subtitle: "OPD / IPD", tone: "indigo", icon: "consult" },
+  { title: "Medicines", subtitle: "Meds refill", tone: "green", icon: "pharmacy" },
+  { title: "Hospital", subtitle: "Book slots", tone: "blue", icon: "hospital" },
+  { title: "Finance", subtitle: "Medical loan", tone: "gold", icon: "finance" },
 ]
 
 const quickAccessRoutes: Partial<Record<QuickAccessItem["title"], string>> = {
-  Stress: "/stress-relief",
+  Insurance: "/insurance",
   "Lab Test": "/lab-tests",
-  Consult: "/ai-symptom-analyser",
-  Tasks: "/weekend-tasks",
-  Pharma: "/pharmacy",
-  Badges: "/badges",
+  Doctor: "/teleconsultation",
+  Medicines: "/pharmacy",
+  Hospital: "/hospitals",
+  Finance: "/medical-finance",
+}
+
+function quickIcon(name: QuickAccessItem["icon"]) {
+  if (name === "stress") return <FiSmile />
+  if (String(name) === "insurance") return <FiShield />
+  if (name === "lab") return <FiThermometer />
+  if (String(name) === "insurance") return <FiShield />
+  if (name === "consult") return <FaStethoscope />
+  if (name === "pharmacy") return <FaPills />
+  if (name === "hospital") return <FaHospital />
+  if (name === "finance") return <FiCreditCard />
+  return <FiSmile />
 }
 
 const feelings = [
@@ -124,44 +115,150 @@ const feelingPrefill: Record<(typeof feelings)[number]["id"], string> = {
   fatigue: "I am dealing with chronic fatigue and low energy. Please help.",
 }
 
-const feelingDoctorIntro: Record<(typeof feelings)[number]["id"], { name: string; avatar: string }> = {
+const feelingDoctorIntro: Record<(typeof feelings)[number]["id"], { name: string; avatar: string; phone: string }> = {
   dizzy: {
-    name: "Dr. Asha Iyer",
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=320&q=80",
+    name: "Dr. Suneeta",
+    avatar: "/assets/doctors/dr-suneeta-mittal.webp",
+    phone: "+919876543210",
   },
   mental: {
-    name: "Dr. Kavita Rao",
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=320&q=80",
+    name: "Dr. Amita",
+    avatar: "/assets/doctors/dr-amita-mahajan.webp",
+    phone: "+919876543211",
   },
   sleep: {
-    name: "Dr. Neha Menon",
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=320&q=80",
+    name: "Dr. Renu",
+    avatar: "/assets/doctors/dr-renu-misra.webp",
+    phone: "+919876543212",
   },
   tension: {
-    name: "Dr. Rohan Kapoor",
-    avatar: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=320&q=80",
+    name: "Dr. Indu",
+    avatar: "/assets/doctors/dr-indu-bansal-aggarwal.webp",
+    phone: "+919876543213",
   },
   fever: {
-    name: "Dr. Arjun Mehta",
-    avatar: "https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&w=320&q=80",
+    name: "Dr. Naresh",
+    avatar: "/assets/doctors/dr-naresh-trehan.webp",
+    phone: "+919876543214",
   },
   fatigue: {
-    name: "Dr. Priya Nair",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=320&q=80",
+    name: "Dr. Randeep",
+    avatar: "/assets/doctors/dr-randeep-guleria.webp",
+    phone: "+919876543215",
   },
 }
 
-const TIP_PREF_KEY = "home:tip-preference"
-const TIP_FAST_SCROLL_KEY = "home:tip-fast-scroll"
-const DAILY_TIP_STORAGE_KEY = "daily_tip_map"
-const DAILY_TIP_DATE_KEY = "daily_tip_date"
-const AI_THREAD_KEY = "employee_ai_thread_id"
-const AI_THREAD_KEY_LAST = "employee_ai_thread_id:last"
-const AI_MESSAGE_PREFIX = "employee_ai_thread_messages:"
 const HR_CACHE_KEY = "home:last_hr"
 const BP_CACHE_KEY = "home:last_bp"
-const WEATHER_CACHE_KEY = "home:last_weather"
+const SUGAR_CACHE_KEY = "home:last_sugar"
 const UNREAD_CACHE_KEY = "home:last_unread"
+const TELE_FREE_OFFER_KEY = "teleconsult_free_offer"
+const LAB_FREE_CHECKUP_KEY = "lab_free_checkup_offer"
+
+type TeleOfferLocal = { active: boolean; activeUntil?: string | null; enrolled?: boolean }
+type LabOfferLocal = LabOfferStatus & { active?: boolean }
+type PaidTeleconsultAccessLocal = TeleconsultPaidAccessStatus
+
+const teleUnlockQuestions = [
+  {
+    id: "conditions",
+    title: "Do you have any existing medical condition?",
+    options: ["Diabetes", "Blood Pressure", "Heart Disease", "Asthma", "Thyroid", "None", "Other"],
+  },
+  { id: "takingMedicine", title: "Are you currently taking any medicine?", options: ["Yes", "No"] },
+  { id: "surgeryHistory", title: "Have you had any surgery or hospitalization before?", options: ["Yes", "No"] },
+  {
+    id: "allergies",
+    title: "Do you have any allergies?",
+    options: ["Medicine Allergy", "Food Allergy", "Skin Allergy", "No Allergy", "Other"],
+  },
+  { id: "habits", title: "Do you smoke or consume alcohol?", options: ["Smoke", "Alcohol", "Both", "No"] },
+] as const
+
+const labOfferQuestions = [
+  { id: "activityLevel", title: "How active is your daily routine?", options: ["Very Active", "Moderately Active", "Mostly Inactive"] },
+  { id: "sleepHours", title: "How many hours do you usually sleep?", options: ["8+ hours", "6-8 hours", "Under 6 hours"] },
+  { id: "stressLevel", title: "How would you describe your current stress level?", options: ["Low", "Moderate", "High"] },
+  { id: "lastCheckup", title: "When did you last get a full health checkup?", options: ["Within 6 months", "Within 1 year", "Never / More than 2 years ago"] },
+  { id: "habits", title: "Which one fits your routine best?", options: ["No major habits", "Occasional junk food", "Smoking / Alcohol"] },
+] as const
+
+type TeleUnlockQuestionId = (typeof teleUnlockQuestions)[number]["id"]
+type LabOfferQuestionId = (typeof labOfferQuestions)[number]["id"]
+
+const teleUnlockOptionMeta: Record<
+  TeleUnlockQuestionId,
+  Record<string, { icon: string; hint: string }>
+> = {
+  conditions: {
+    Diabetes: { icon: "🩸", hint: "Sugar and insulin related care" },
+    "Blood Pressure": { icon: "💓", hint: "BP monitoring and medicine context" },
+    "Heart Disease": { icon: "❤️", hint: "Cardiac history for safer consults" },
+    Asthma: { icon: "🫁", hint: "Breathing and inhaler support" },
+    Thyroid: { icon: "🦋", hint: "Hormonal and thyroid medication context" },
+    None: { icon: "✅", hint: "No known ongoing condition" },
+    Other: { icon: "📝", hint: "Any other condition not listed here" },
+  },
+  takingMedicine: {
+    Yes: { icon: "💊", hint: "Current medicines help doctors guide better" },
+    No: { icon: "🌿", hint: "No active medicine course right now" },
+  },
+  surgeryHistory: {
+    Yes: { icon: "🏥", hint: "Past surgery or hospital admission history" },
+    No: { icon: "🛡️", hint: "No major surgery or admission before" },
+  },
+  allergies: {
+    "Medicine Allergy": { icon: "💉", hint: "Drug sensitivity or reaction history" },
+    "Food Allergy": { icon: "🍽️", hint: "Food-based allergy or intolerance" },
+    "Skin Allergy": { icon: "🌤️", hint: "Skin, rash, or contact allergy pattern" },
+    "No Allergy": { icon: "✅", hint: "No known allergy reported" },
+    Other: { icon: "📝", hint: "Any other allergy not listed here" },
+  },
+  habits: {
+    Smoke: { icon: "🚬", hint: "Smoking history affects long-term guidance" },
+    Alcohol: { icon: "🍷", hint: "Alcohol intake helps with medicine planning" },
+    Both: { icon: "⚕️", hint: "Combined habit history for better triage" },
+    No: { icon: "🌱", hint: "No smoking or alcohol consumption" },
+  },
+}
+
+function getTeleUnlockOptionMeta(questionId: TeleUnlockQuestionId, option: string) {
+  return teleUnlockOptionMeta[questionId]?.[option] ?? { icon: "✨", hint: "Tap to save and continue" }
+}
+
+const labOfferOptionMeta: Record<LabOfferQuestionId, Record<string, { icon: string; hint: string }>> = {
+  activityLevel: {
+    "Very Active": { icon: "🏃", hint: "You move a lot through the day" },
+    "Moderately Active": { icon: "🚶", hint: "Balanced routine with some movement" },
+    "Mostly Inactive": { icon: "🪑", hint: "Low movement and long sitting hours" },
+  },
+  sleepHours: {
+    "8+ hours": { icon: "🌙", hint: "Good recovery pattern" },
+    "6-8 hours": { icon: "🛌", hint: "Average sleep routine" },
+    "Under 6 hours": { icon: "⏰", hint: "Short sleep can increase risk" },
+  },
+  stressLevel: {
+    Low: { icon: "🌿", hint: "Calm and steady most days" },
+    Moderate: { icon: "⚖️", hint: "Manageable day-to-day pressure" },
+    High: { icon: "🔥", hint: "Stress feels heavy or frequent" },
+  },
+  lastCheckup: {
+    "Within 6 months": { icon: "🧾", hint: "You checked recently" },
+    "Within 1 year": { icon: "📅", hint: "You checked once in the past year" },
+    "Never / More than 2 years ago": { icon: "⚠️", hint: "No recent preventive checkup" },
+  },
+  habits: {
+    "No major habits": { icon: "✅", hint: "No routine smoking or alcohol use" },
+    "Occasional junk food": { icon: "🍟", hint: "Food habits need some cleanup" },
+    "Smoking / Alcohol": { icon: "🚬", hint: "This raises long-term health risk" },
+  },
+}
+
+function getLabOfferOptionMeta(questionId: LabOfferQuestionId, option: string) {
+  return labOfferOptionMeta[questionId]?.[option] ?? { icon: "✨", hint: "Tap to save and continue" }
+}
+
+type MetricId = "heart-rate" | "blood-pressure" | "calories" | "sugar"
 
 const metrics: Array<{ id: MetricId; title: string; value: string; unit: string; status: string; age: string; tone: string; icon: ReactElement }> = [
   { id: "heart-rate", title: "Heart Rate", value: "72", unit: "bpm", status: "normal", age: "2 hours ago", tone: "red", icon: <FiHeart /> },
@@ -171,73 +268,35 @@ const metrics: Array<{ id: MetricId; title: string; value: string; unit: string;
 ]
 const HOME_SCROLL_KEY = "home:scrollTop"
 
-function seedFromString(input: string) {
-  let hash = 0
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash * 31 + input.charCodeAt(i)) >>> 0
-  }
-  return hash || 1
+
+type HeroSlide = {
+  id: string
+  title: string
+  highlight: string
+  subtitle: string
+  cta: string
+  route: string
+  tone: "tone-pharmacy" | "tone-lab" | "tone-tele"
+  illustration: "pharmacy" | "lab" | "tele"
+  compactSubtitle?: boolean
+  bannerImage?: string
 }
 
-function seededShuffle<T>(items: T[], seed: number) {
-  const arr = [...items]
-  let s = seed
-  for (let i = arr.length - 1; i > 0; i -= 1) {
-    s = (s * 1664525 + 1013904223) >>> 0
-    const j = s % (i + 1)
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
-
-function buildLocalDailyTips(dayKey: string) {
-  const shuffled = seededShuffle(healthTips, seedFromString(dayKey))
-  return shuffled.slice(0, 3).map((tip, index) => ({
-    id: `daily-local-${dayKey}-${index + 1}`,
-    title: tip.title,
-    summary: tip.summary,
-    tags: tip.tags,
-    moodTags: tip.moodTags,
-    heroImage: tip.heroImage,
-    sections: tip.sections,
-  }))
-}
-
-function tabIcon(name: (typeof tabs)[number]["icon"]) {
-  if (name === "home") return <FiHome />
-  if (name === "health") return <FiActivity />
-  if (name === "chat") return <FiMessageCircle />
-  if (name === "stress") return <FiSmile />
-  return <FiCreditCard />
-}
-
-function quickIcon(name: QuickAccessItem["icon"]) {
-  if (name === "stress") return <FiSmile />
-  if (name === "lab") return <FiThermometer />
-  if (name === "consult") return <FiMapPin />
-  if (name === "weekend") return <FiAward />
-  if (name === "pharmacy") return <FiPackage />
-  return <FiAward />
+type StoredTeleBooking = {
+  id: string
+  doctorName?: string
+  scheduledAt?: string
+  joinWindowStart?: string
 }
 
 export default function Home() {
   const navigate = useNavigate()
-  const location = useLocation()
   const [selectedFeelings, setSelectedFeelings] = useState<string[]>([])
-  const [tipIndex, setTipIndex] = useState(0)
-  const [isTabDocked, setIsTabDocked] = useState(false)
   const [displayScore, setDisplayScore] = useState(0)
   const [lastAction, setLastAction] = useState("Ready")
-  const [tipInteracting, setTipInteracting] = useState(false)
-  const [showSos, setShowSos] = useState(false)
-  const [sosStep, setSosStep] = useState(0)
-  const [sosRunning, setSosRunning] = useState(false)
-  const [sosStatus, setSosStatus] = useState<"dialing" | "connecting" | "connected">("dialing")
-  const [sosCountdown, setSosCountdown] = useState<number | null>(null)
-  const [weather, setWeather] = useState<WeatherSnapshot | null>(null)
-  const [dailyTips, setDailyTips] = useState<DailyTipPayload[] | null>(null)
   const [latestHeartRate, setLatestHeartRate] = useState<{ value: number | null; eventAt?: string } | null>(null)
   const [latestBloodPressure, setLatestBloodPressure] = useState<{ sys: number | null; dia: number | null; eventAt?: string } | null>(null)
+  const [latestSugar, setLatestSugar] = useState<{ value: number | null; eventAt?: string } | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [heroIndex, setHeroIndex] = useState(0)
   const [heroDragging, setHeroDragging] = useState(false)
@@ -246,17 +305,122 @@ export default function Home() {
   const heroDragWidth = useRef(1)
   const [heroDragOffset, setHeroDragOffset] = useState(0)
   const heroContainerRef = useRef<HTMLDivElement | null>(null)
+  const [, setTeleOffer] = useState<TeleOfferLocal>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(TELE_FREE_OFFER_KEY) || "null") as TeleOfferLocal | null
+      if (!parsed?.activeUntil) return { active: false }
+      return { ...parsed, active: new Date(parsed.activeUntil).getTime() > Date.now() }
+    } catch {
+      return { active: false }
+    }
+  })
+  const [showTeleUnlock, setShowTeleUnlock] = useState(false)
+  const [teleQuestionIndex, setTeleQuestionIndex] = useState(0)
+  const [teleAnswers, setTeleAnswers] = useState<Record<string, string[]>>({})
+  const [teleUnlocking, setTeleUnlocking] = useState(false)
+  const [teleUnlockedMessage, setTeleUnlockedMessage] = useState("")
+  const [paidTeleconsultAccess, setPaidTeleconsultAccess] = useState<PaidTeleconsultAccessLocal>({
+    unlocked: false,
+    availablePasses: 0,
+    consultationMinutes: 15,
+  })
+  const [labOffer, setLabOffer] = useState<LabOfferLocal>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LAB_FREE_CHECKUP_KEY) || "null") as LabOfferLocal | null
+      return parsed ?? { enrolled: false, completed: false, eligible: false, result: null, updatedAt: null }
+    } catch {
+      return { enrolled: false, completed: false, eligible: false, result: null, updatedAt: null }
+    }
+  })
+  const [showLabOfferUnlock, setShowLabOfferUnlock] = useState(false)
+  const [labOfferQuestionIndex, setLabOfferQuestionIndex] = useState(0)
+  const [labOfferAnswers, setLabOfferAnswers] = useState<Record<string, string[]>>({})
+  const [labOfferSubmitting, setLabOfferSubmitting] = useState(false)
+  const [labOfferResultMessage, setLabOfferResultMessage] = useState("")
   const apiCooldownRef = useRef<Record<string, number>>({})
   const apiFailRef = useRef<Record<string, number>>({})
 
-  const tipTouchStartX = useRef<number | null>(null)
   const pageRef = useRef<HTMLElement | null>(null)
-  const sosAlarmRef = useRef<number | null>(null)
-  const sosAlarmAudioRef = useRef<HTMLAudioElement | null>(null)
-  const sosVibrateRef = useRef<number | null>(null)
-  const scoreTarget = 90
+  const scoreTarget = useMemo(() => {
+    const todayKey = new Date().toISOString().slice(0, 10)
+    const mealStorageKey = `calorie_meals_${todayKey}`
+    let calorieTotal = 0
+    try {
+      const raw = localStorage.getItem(mealStorageKey)
+      if (raw) {
+        const parsed = JSON.parse(raw) as Array<{ calories?: number }>
+        calorieTotal = parsed.reduce((sum, row) => sum + (Number(row.calories) || 0), 0)
+      }
+    } catch {
+      calorieTotal = 0
+    }
 
-  const [moodHint, setMoodHint] = useState("")
+    const hr = latestHeartRate?.value ?? null
+    const bpSys = latestBloodPressure?.sys ?? null
+    const bpDia = latestBloodPressure?.dia ?? null
+    const sugar = latestSugar?.value ?? null
+
+    let score = 68
+    if (typeof hr === "number") {
+      score += hr >= 55 && hr <= 95 ? 10 : 4
+    }
+    if (typeof bpSys === "number" && typeof bpDia === "number") {
+      score += bpSys <= 130 && bpDia <= 85 ? 10 : 4
+    }
+    if (typeof sugar === "number") {
+      score += sugar >= 80 && sugar <= 130 ? 10 : 4
+    }
+    if (calorieTotal > 0) {
+      score += calorieTotal >= 1200 && calorieTotal <= 2400 ? 6 : 3
+    }
+    if (unreadCount > 0) {
+      score += 2
+    }
+
+    return Math.max(40, Math.min(100, Math.round(score)))
+  }, [latestBloodPressure, latestHeartRate, latestSugar, unreadCount])
+
+  const scoreMeta = useMemo(() => {
+    const score = scoreTarget
+    const hr = latestHeartRate?.value ?? null
+    const bpSys = latestBloodPressure?.sys ?? null
+    const bpDia = latestBloodPressure?.dia ?? null
+    const sugar = latestSugar?.value ?? null
+
+    const hrTag =
+      typeof hr === "number"
+        ? hr >= 55 && hr <= 95
+          ? "Heart rate normal"
+          : hr > 95
+            ? "Heart rate high"
+            : "Heart rate low"
+        : "Heart rate pending"
+    const bpTag =
+      typeof bpSys === "number" && typeof bpDia === "number"
+        ? bpSys <= 130 && bpDia <= 85
+          ? "BP in range"
+          : "BP needs check"
+        : "BP pending"
+    const sugarTag =
+      typeof sugar === "number"
+        ? sugar >= 80 && sugar <= 130
+          ? "Sugar stable"
+          : "Sugar needs check"
+        : "Sugar pending"
+
+    const label = score >= 85 ? "Excellent" : score >= 70 ? "Good" : "Needs Care"
+    const tone = score >= 85 ? "excellent" : score >= 70 ? "good" : "care"
+    const caption =
+      score >= 85
+        ? "Excellent health indicators today. Keep it steady."
+        : score >= 70
+          ? "Good baseline. Small daily habits will lift this fast."
+          : "Let’s stabilise the basics first. Start with BP, sugar and hydration."
+
+    const tags = [hrTag, bpTag, sugarTag].slice(0, 2)
+    return { label, tone, caption, tags }
+  }, [latestBloodPressure, latestHeartRate, latestSugar, scoreTarget])
+
   const shouldSkipApi = (key: string) => {
     const until = apiCooldownRef.current[key] ?? 0
     return Date.now() < until
@@ -273,6 +437,49 @@ export default function Home() {
     apiFailRef.current[key] = 0
     apiCooldownRef.current[key] = 0
   }
+
+  useEffect(() => {
+    let active = true
+    void getTeleconsultOfferStatus()
+      .then((status) => {
+        if (!active) return
+        const next = { active: Boolean(status.active), enrolled: Boolean(status.enrolled), activeUntil: status.activeUntil }
+        setTeleOffer(next)
+        localStorage.setItem(TELE_FREE_OFFER_KEY, JSON.stringify(next))
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void getTeleconsultPaidAccessStatus()
+      .then((status) => {
+        if (!active) return
+        setPaidTeleconsultAccess(status)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void getLabOfferStatus()
+      .then((status) => {
+        if (!active) return
+        const next = { ...status, active: Boolean(status.eligible) }
+        setLabOffer(next)
+        localStorage.setItem(LAB_FREE_CHECKUP_KEY, JSON.stringify(next))
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
   const formatAge = (eventAt?: string) => {
     if (!eventAt) return "No reading yet"
     const ts = Date.parse(eventAt)
@@ -286,145 +493,75 @@ export default function Home() {
     return `${days} days ago`
   }
 
-  function computeMoodHint() {
-    const threadId = localStorage.getItem(AI_THREAD_KEY_LAST) ?? localStorage.getItem(AI_THREAD_KEY)
-    if (!threadId) return ""
-    const raw = localStorage.getItem(`${AI_MESSAGE_PREFIX}${threadId}`)
-    if (!raw) return ""
-    try {
-      const parsed = JSON.parse(raw) as Array<{ from: string; text: string }>
-      const lastUser = [...parsed].reverse().find((item) => item.from === "user")
-      if (!lastUser?.text) return ""
-      const text = lastUser.text.toLowerCase()
-      if (/(stress|anxious|panic|overwhelm|tension)/.test(text)) return "stress"
-      if (/(dizz|vertigo|faint|lightheaded)/.test(text)) return "dizzy"
-      if (/(sleep|insomnia|tired|night)/.test(text)) return "sleep"
-      if (/(fatigue|low energy|weak|drained)/.test(text)) return "fatigue"
-      return ""
-    } catch {
-      return ""
-    }
-  }
 
   useEffect(() => {
-    const update = () => setMoodHint(computeMoodHint())
-    update()
-    const interval = window.setInterval(update, 3000)
-    const onFocus = () => update()
-    window.addEventListener("focus", onFocus)
+    let active = true
+    void getAddressProfile()
+      .then(({ address }) => {
+        if (!active || !address) return
+        syncAddressCache({
+          homeAddress: address.homeAddress ?? "",
+          officeAddress: address.officeAddress ?? "",
+          primary: "home",
+        })
+      })
+      .catch(() => undefined)
     return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const loadLatestSugar = async () => {
+      if (shouldSkipApi("vitals_sugar")) {
+        const cached = localStorage.getItem(SUGAR_CACHE_KEY)
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached) as { value: number | null; eventAt?: string }
+            setLatestSugar(parsed)
+          } catch {
+            // ignore cache parse errors
+          }
+        }
+        return
+      }
+      try {
+        const latest = await getLatestVital("blood_sugar")
+        if (!active) return
+        const next = {
+          value: typeof latest?.value === "number" ? latest.value : null,
+          eventAt: latest?.eventAt,
+        }
+        setLatestSugar(next)
+        localStorage.setItem(SUGAR_CACHE_KEY, JSON.stringify(next))
+        markApiSuccess("vitals_sugar")
+      } catch {
+        if (!active) return
+        markApiFailure("vitals_sugar")
+        const cached = localStorage.getItem(SUGAR_CACHE_KEY)
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached) as { value: number | null; eventAt?: string }
+            setLatestSugar(parsed)
+            return
+          } catch {
+            // ignore cache parse errors
+          }
+        }
+        setLatestSugar(null)
+      }
+    }
+    void loadLatestSugar()
+    const interval = window.setInterval(loadLatestSugar, 120000)
+    return () => {
+      active = false
       window.clearInterval(interval)
-      window.removeEventListener("focus", onFocus)
-    }
-  }, [])
-
-  const recentFastScroll = useMemo(() => {
-    const raw = localStorage.getItem(TIP_FAST_SCROLL_KEY)
-    if (!raw) return false
-    const ts = Number(raw)
-    if (Number.isNaN(ts)) return false
-    return Date.now() - ts < 6 * 60 * 60 * 1000
-  }, [])
-
-  const preferredTag = useMemo(() => localStorage.getItem(TIP_PREF_KEY) ?? "", [])
-
-  const weatherTag = useMemo(() => {
-    if (!weather) return ""
-    if (weather.aqi && weather.aqi >= 4) return "Recovery"
-    const cond = weather.condition.toLowerCase()
-    if (weather.tempC >= 32) return "Hydration"
-    if (weather.tempC <= 18) return "Sleep"
-    if (cond.includes("rain") || cond.includes("drizzle") || cond.includes("thunder")) return "Recovery"
-    if (weather.humidity >= 70) return "Hydration"
-    return ""
-  }, [weather])
-
-  const hydratedDailyTips = useMemo<HealthTip[]>(() => {
-    if (!dailyTips || dailyTips.length === 0) return []
-    const iconFor = (key?: string) => {
-      if (key === "droplet") return <FiDroplet />
-      if (key === "moon") return <FiMoon />
-      if (key === "smile") return <FiSmile />
-      if (key === "heart") return <FiHeart />
-      if (key === "thermo") return <FiThermometer />
-      return <FiActivity />
-    }
-    return dailyTips.map((tip) => ({
-      ...tip,
-      icon: iconFor(tip.iconKey),
-    }))
-  }, [dailyTips])
-
-  const displayTips = useMemo<HealthTip[]>(() => {
-    if (hydratedDailyTips.length > 0) return hydratedDailyTips.slice(0, 3)
-    let pool = [...healthTips]
-    if (weatherTag) {
-      const tagged = pool.filter((tip) => tip.tags.some((tag) => tag.toLowerCase() === weatherTag.toLowerCase()))
-      if (tagged.length > 0) pool = tagged
-    } else if (preferredTag) {
-      const tagged = pool.filter((tip) => tip.tags.some((tag) => tag.toLowerCase() === preferredTag.toLowerCase()))
-      if (tagged.length > 0) pool = tagged
-    } else if (moodHint || recentFastScroll) {
-      const mood = moodHint || (recentFastScroll ? "stress" : "")
-      const tagged = pool.filter((tip) => tip.moodTags.includes(mood))
-      if (tagged.length > 0) pool = tagged
-    }
-    const unique = Array.from(new Map(pool.map((tip) => [tip.id, tip])).values())
-    const fallback = healthTips.filter((tip) => !unique.find((item) => item.id === tip.id))
-    const combined = [...unique, ...fallback]
-    return combined.slice(0, 3)
-  }, [moodHint, preferredTag, recentFastScroll, weatherTag])
-
-  type HeroSlide = {
-    id: string
-    title: string
-    highlight: string
-    subtitle: string
-    cta: string
-    route: string
-    tone: "tone-pharmacy" | "tone-lab" | "tone-tele"
-    illustration: "pharmacy" | "lab" | "tele"
-  }
-
-  type StoredLabBooking = {
-    id: string
-    status?: string
-    testName?: string
-    scheduledAt?: string
-    createdAt?: string
-    etaMinutes?: number
-  }
-
-  type StoredTeleBooking = {
-    id: string
-    doctorName?: string
-    scheduledAt?: string
-    joinWindowStart?: string
-  }
-
-  type StoredPharmacyOrder = {
-    id: string
-    orderId?: string
-    createdAt?: string
-    etaMinutes?: number
-  }
-
-  const [heroSeed, setHeroSeed] = useState(0)
-
-  useEffect(() => {
-    const onUpdate = () => setHeroSeed((prev) => prev + 1)
-    window.addEventListener("app-notification", onUpdate as EventListener)
-    window.addEventListener("storage", onUpdate)
-    return () => {
-      window.removeEventListener("app-notification", onUpdate as EventListener)
-      window.removeEventListener("storage", onUpdate)
     }
   }, [])
 
   const heroSlides = useMemo<HeroSlide[]>(() => {
-    const labRaw = localStorage.getItem("lab_bookings")
     const teleRaw = localStorage.getItem("teleconsult_bookings")
-    const pharmacyRaw = localStorage.getItem("pharmacy_orders")
 
     const parseList = <T,>(raw: string | null): T[] => {
       if (!raw) return []
@@ -436,129 +573,106 @@ export default function Home() {
       }
     }
 
-    const labBookings = parseList<StoredLabBooking>(labRaw)
     const teleBookings = parseList<StoredTeleBooking>(teleRaw)
-    const pharmacyOrders = parseList<StoredPharmacyOrder>(pharmacyRaw)
-
-    const labLatest = labBookings[0]
     const teleLatest = teleBookings[0]
-    const pharmacyLatest = pharmacyOrders[0]
-
-    const statusSlides: Array<HeroSlide & { createdAt: number }> = []
-
-    if (labLatest) {
-      const eta = labLatest.etaMinutes ?? 32
-      statusSlides.push({
-        id: `lab-status-${labLatest.id}`,
-        title: "Lab test booked",
-        highlight: "phlebo assigned",
-        subtitle: `Arriving in ${eta} mins`,
-        cta: "Track Lab Test",
-        route: `/lab-tests/track/${labLatest.id}`,
-        tone: "tone-lab",
-        illustration: "lab",
-        createdAt: Date.parse(labLatest.createdAt ?? labLatest.scheduledAt ?? "") || Date.now() - 2000,
-      })
-    }
-
-    if (pharmacyLatest) {
-      const eta = pharmacyLatest.etaMinutes ?? 18
-      statusSlides.push({
-        id: `pharmacy-status-${pharmacyLatest.id}`,
-        title: "Medicines booked",
-        highlight: "rider assigned",
-        subtitle: `Arriving in ${eta} mins`,
-        cta: "Track Order",
-        route: "/pharmacy/tracking",
-        tone: "tone-pharmacy",
-        illustration: "pharmacy",
-        createdAt: Date.parse(pharmacyLatest.createdAt ?? "") || Date.now() - 1500,
-      })
-    }
-
-    if (teleLatest) {
-      const joinAt = teleLatest.joinWindowStart ?? teleLatest.scheduledAt
-      const joinMs = joinAt ? Date.parse(joinAt) : NaN
-      const minutesToJoin =
-        Number.isFinite(joinMs) ? Math.max(1, Math.round((joinMs - Date.now()) / 60000)) : 30
-      statusSlides.push({
-        id: `tele-status-${teleLatest.id}`,
-        title: "Doctor consult",
-        highlight: "room ready",
-        subtitle: minutesToJoin <= 1 ? "Join now" : `Starts in ${minutesToJoin} mins`,
-        cta: "Join Call",
-        route: teleLatest.id ? `/teleconsultation/overview/${teleLatest.id}` : "/teleconsultation",
-        tone: "tone-tele",
-        illustration: "tele",
-        createdAt: Date.parse(teleLatest.scheduledAt ?? "") || Date.now() - 1000,
-      })
-    }
-
-    const baseSlides: HeroSlide[] = [
+    return [
       {
         id: "pharmacy",
-        title: "Your medicines",
-        highlight: "are on the way",
-        subtitle: "Delivered in 5 MINS!",
-        cta: "Track delivery",
-        route: "/pharmacy/tracking",
+        title: "Subscribe and save",
+        highlight: "up to 20% on Medicines",
+        subtitle: "Flexible medicine savings for repeat orders.",
+        cta: "Subscribe Now",
+        route: "/pharmacy",
         tone: "tone-pharmacy",
         illustration: "pharmacy",
+        compactSubtitle: true,
+        bannerImage: "/assets/home-banners/pharmacy-subscribe.webp",
       },
       {
         id: "lab",
-        title: "Lab tests",
-        highlight: "at your doorstep",
-        subtitle: "Book sample pickup in minutes",
-        cta: "Book Lab Test",
+        title: "You are eligible",
+        highlight: "for a free health checkup",
+        subtitle: "Preventive health checkup by Astikan.",
+        cta: "Enroll Now",
         route: "/lab-tests",
         tone: "tone-lab",
         illustration: "lab",
+        compactSubtitle: true,
+        bannerImage: "/assets/home-banners/lab-eligibility.webp",
       },
       {
-        id: "tele",
-        title: "Talk to a doctor",
-        highlight: "within minutes",
-        subtitle: "Video consults, anytime",
-        cta: "Start Consult",
-        route: "/teleconsultation",
+        id: teleLatest?.id ? `tele-status-${teleLatest.id}` : "tele",
+        title: "Teleconsultation",
+        highlight: "only at ₹49",
+        subtitle: "Pay online and unlock a 15 minute doctor consultation.",
+        cta: "Consult Now",
+        route: "/teleconsultation/offer-checkout",
         tone: "tone-tele",
         illustration: "tele",
+        bannerImage: "/assets/home-banners/doctor-room-ready.webp",
       },
     ]
-
-    const sortedStatus = statusSlides.sort((a, b) => b.createdAt - a.createdAt).map(({ createdAt, ...slide }) => slide)
-    const activeTypes = new Set(sortedStatus.map((slide) => slide.illustration))
-    const fallbacks = baseSlides.filter((slide) => !activeTypes.has(slide.illustration))
-    const combined = [...sortedStatus, ...fallbacks]
-    return combined.slice(0, 3)
-  }, [heroSeed])
+  }, [])
   const labVariant = useMemo(() => ["a", "b", "c"][Math.floor(Math.random() * 3)], [])
 
   function renderHeroIllustration(kind: HeroSlide["illustration"]) {
     if (kind === "lab") {
       return (
         <div className={`medicine-hero-illustration illustration-lab variant-${labVariant}`} aria-hidden="true">
-          <div className="lab-beaker" />
-          <div className="lab-chip" />
-          <span className="lab-icon lab-thermo"><FiThermometer /></span>
-          <span className="lab-icon lab-drop"><FiDroplet /></span>
-          <span className="lab-icon lab-activity"><FiActivity /></span>
+          <span className="lab-orbit lab-orbit-a" />
+          <span className="lab-orbit lab-orbit-b" />
+          <div className="lab-check-card">
+            <span className="lab-check-badge"><FiShield /></span>
+            <div className="lab-check-lines">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+          <div className="lab-sample-kit">
+            <span className="lab-kit-cap" />
+            <span className="lab-kit-fill" />
+          </div>
+          <div className="lab-health-chip chip-a"><FiHeart /></div>
+          <div className="lab-health-chip chip-b"><FiDroplet /></div>
+          <div className="lab-health-chip chip-c"><FiActivity /></div>
         </div>
       )
     }
     if (kind === "tele") {
       return (
         <div className="medicine-hero-illustration illustration-tele" aria-hidden="true">
-          <span className="tele-ring" />
-          <span className="tele-phone"><FiPhoneCall /></span>
-          <span className="tele-chat"><FiMessageCircle /></span>
-          <span className="tele-pulse" />
+          <span className="tele-halo tele-halo-a" />
+          <span className="tele-halo tele-halo-b" />
+          <div className="tele-portrait-frame">
+            <span className="tele-doctor-badge">AI</span>
+            <span className="tele-presence-dot" />
+            <img
+              className="tele-doctor-photo"
+              src="/assets/doctors/doctor-4.webp"
+              alt=""
+              loading="lazy"
+            />
+          </div>
+          <span className="tele-chip tele-chip-a">24x7</span>
+          <span className="tele-chip tele-chip-b">Care</span>
+          <span className="tele-chat-bubble tele-chat-bubble-a" />
+          <span className="tele-chat-bubble tele-chat-bubble-b" />
+          <span className="tele-health-pulse" />
         </div>
       )
     }
     return (
       <div className="medicine-hero-illustration illustration-pharmacy" aria-hidden="true">
+        <span className="pharmacy-glow pharmacy-glow-a" />
+        <span className="pharmacy-glow pharmacy-glow-b" />
+        <div className="pharmacy-bottle">
+          <span className="pharmacy-bottle-cap" />
+          <span className="pharmacy-bottle-label" />
+        </div>
+        <span className="pharmacy-pill pharmacy-pill-a" />
+        <span className="pharmacy-pill pharmacy-pill-b" />
+        <span className="pharmacy-pill pharmacy-pill-c" />
         <div className="route-line route-a" />
         <div className="route-line route-b" />
         <span className="hero-pin hero-shop"><FiMapPin /></span>
@@ -602,13 +716,11 @@ export default function Home() {
     }
     const delta = heroDragDelta.current
     const width = heroDragWidth.current || 1
-    const threshold = Math.min(90, width * 0.18)
+    const threshold = Math.min(72, width * 0.14)
     if (Math.abs(delta) > threshold) {
-      const skip =
-        Math.abs(delta) > width * 0.55 && heroSlides.length > 2 ? 2 : 1
       setHeroIndex((prev) => {
-        if (delta > 0) return (prev - skip + heroSlides.length) % heroSlides.length
-        return (prev + skip) % heroSlides.length
+        if (delta > 0) return (prev - 1 + heroSlides.length) % heroSlides.length
+        return (prev + 1) % heroSlides.length
       })
     }
     heroDragStartX.current = null
@@ -617,18 +729,7 @@ export default function Home() {
     window.setTimeout(() => setHeroDragging(false), 160)
   }
 
-  useEffect(() => {
-    if (tipInteracting) return
-    if (displayTips.length <= 1) return
-    const ticker = window.setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % displayTips.length)
-    }, 4300)
-    return () => window.clearInterval(ticker)
-  }, [tipInteracting, displayTips.length])
 
-  useEffect(() => {
-    if (tipIndex >= displayTips.length) setTipIndex(0)
-  }, [displayTips.length, tipIndex])
 
   useEffect(() => {
     let frame = 0
@@ -795,23 +896,155 @@ export default function Home() {
     })
   }, [metricCards, latestBloodPressure])
 
-  const activeTab: (typeof tabs)[number]["id"] = useMemo(() => {
-    if (location.pathname.startsWith("/health")) return "Health"
-    if (location.pathname.startsWith("/ai-chat")) return "Doctor Chat"
-    if (location.pathname.startsWith("/stress-relief")) return "Stress Relief"
-    if (location.pathname.startsWith("/wallet")) return "Wallet"
-    return "Home"
-  }, [location.pathname])
+  const metricCardsWithVitals = useMemo(() => {
+    if (!latestSugar) return metricCardsWithBp
+    return metricCardsWithBp.map((item) => {
+      if (item.id !== "sugar") return item
+      const value = latestSugar.value
+      const status = typeof value === "number"
+        ? value > 180
+          ? "high"
+          : value < 70
+            ? "low"
+            : "normal"
+        : item.status
+      return {
+        ...item,
+        value: typeof value === "number" ? String(Math.round(value)) : item.value,
+        age: latestSugar.eventAt ? formatAge(latestSugar.eventAt) : item.age,
+        status,
+        unit: "mg/dL",
+      }
+    })
+  }, [latestSugar, metricCardsWithBp])
+
+  function handleHeroCta(slide: HeroSlide) {
+    if (slide.route === "__unlock_tele_offer") {
+      setShowTeleUnlock(true)
+      setTeleQuestionIndex(0)
+      setTeleUnlockedMessage("")
+      return
+    }
+    if (slide.route === "__unlock_lab_offer") {
+      setShowLabOfferUnlock(true)
+      setLabOfferQuestionIndex(0)
+      setLabOfferResultMessage("")
+      return
+    }
+    if (slide.route === "__unlock_wallet_bonus") {
+      navigate("/health-assessments")
+      return
+    }
+    navigate(slide.route)
+  }
+
+  function moveTeleUnlockForward(questionId: string, nextAnswers?: string[]) {
+    const answers = nextAnswers ?? teleAnswers[questionId] ?? []
+    if (!answers.length || teleUnlocking) return
+    if (teleQuestionIndex < teleUnlockQuestions.length - 1) {
+      window.setTimeout(() => {
+        setTeleQuestionIndex((prev) => Math.min(prev + 1, teleUnlockQuestions.length - 1))
+      }, 140)
+      return
+    }
+    void completeTeleUnlock()
+  }
+
+  function toggleTeleAnswer(questionId: string, option: string) {
+    const nextAnswers = [option]
+    setTeleAnswers((prev) => ({ ...prev, [questionId]: nextAnswers }))
+    moveTeleUnlockForward(questionId, nextAnswers)
+  }
+
+  function moveLabOfferForward(questionId: string, nextAnswers?: string[]) {
+    const answers = nextAnswers ?? labOfferAnswers[questionId] ?? []
+    if (!answers.length || labOfferSubmitting) return
+    if (labOfferQuestionIndex < labOfferQuestions.length - 1) {
+      window.setTimeout(() => {
+        setLabOfferQuestionIndex((prev) => Math.min(prev + 1, labOfferQuestions.length - 1))
+      }, 140)
+      return
+    }
+    void completeLabOfferUnlock()
+  }
+
+  function toggleLabOfferAnswer(questionId: string, option: string) {
+    const nextAnswers = [option]
+    setLabOfferAnswers((prev) => ({ ...prev, [questionId]: nextAnswers }))
+    moveLabOfferForward(questionId, nextAnswers)
+  }
+
+  async function completeTeleUnlock() {
+    setTeleUnlocking(true)
+    try {
+      const mappedAnswers = {
+        conditions: teleAnswers.conditions ?? [],
+        takingMedicine: teleAnswers.takingMedicine?.[0] ?? "",
+        surgeryHistory: teleAnswers.surgeryHistory?.[0] ?? "",
+        allergies: teleAnswers.allergies ?? [],
+        habits: teleAnswers.habits ?? [],
+      }
+      const status = await unlockTeleconsultOffer(mappedAnswers)
+      const next = { active: true, enrolled: true, activeUntil: status.activeUntil }
+      setTeleOffer(next)
+      localStorage.setItem(TELE_FREE_OFFER_KEY, JSON.stringify(next))
+      setTeleUnlockedMessage("Unlimited Doctors Consultation Unlocked for a Month.")
+      await addNotification({
+        title: "Unlimited Doctor Calls unlocked",
+        body: "Your 1 month free General Practitioner teleconsultation access is active. Limit: 3 calls/day.",
+        channel: "consult",
+        cta: { label: "Book Now", route: "/teleconsultation" },
+      }).catch(() => undefined)
+    } catch (error) {
+      const activeUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const next = { active: true, enrolled: true, activeUntil }
+      setTeleOffer(next)
+      localStorage.setItem(TELE_FREE_OFFER_KEY, JSON.stringify(next))
+      setTeleUnlockedMessage("Unlimited Doctors Consultation Unlocked for a Month.")
+    } finally {
+      setTeleUnlocking(false)
+    }
+  }
+
+  async function completeLabOfferUnlock() {
+    setLabOfferSubmitting(true)
+    try {
+      const mappedAnswers = {
+        activityLevel: labOfferAnswers.activityLevel?.[0] ?? "",
+        sleepHours: labOfferAnswers.sleepHours?.[0] ?? "",
+        stressLevel: labOfferAnswers.stressLevel?.[0] ?? "",
+        lastCheckup: labOfferAnswers.lastCheckup?.[0] ?? "",
+        habits: labOfferAnswers.habits?.[0] ?? "",
+      }
+      const status = await submitLabOfferAnswers(mappedAnswers)
+      const next = { ...status, active: Boolean(status.eligible) }
+      setLabOffer(next)
+      localStorage.setItem(LAB_FREE_CHECKUP_KEY, JSON.stringify(next))
+      setLabOfferResultMessage(
+        status.eligible
+          ? "Free health checkup unlocked for your account."
+          : "Oops! You are not eligible for the free checkup right now. You can still book lab tests with Astikan savings.",
+      )
+    } catch {
+      const next = {
+        enrolled: true,
+        completed: true,
+        eligible: false,
+        result: "ineligible" as const,
+        updatedAt: new Date().toISOString(),
+        active: false,
+      }
+      setLabOffer(next)
+      localStorage.setItem(LAB_FREE_CHECKUP_KEY, JSON.stringify(next))
+      setLabOfferResultMessage("Oops! You are not eligible for the free checkup right now. You can still book lab tests with Astikan savings.")
+    } finally {
+      setLabOfferSubmitting(false)
+    }
+  }
 
   function handleScroll(e: React.UIEvent<HTMLElement>) {
     const top = e.currentTarget.scrollTop
     window.sessionStorage.setItem(HOME_SCROLL_KEY, String(top))
-    const nextDocked = top > 40
-    setIsTabDocked((prev) => (prev === nextDocked ? prev : nextDocked))
-  }
-
-  function handleTabClick(tab: (typeof tabs)[number]["id"]) {
-    navigate(tabRoutes[tab])
   }
 
   async function openQuickAccess(title: QuickAccessItem["title"]) {
@@ -839,10 +1072,10 @@ export default function Home() {
       const meta = feelings.find((item) => item.id === key)
       navigate("/ai-chat", {
         state: {
-          prefill: feelingPrefill[key],
           doctor: feelingDoctorIntro[key],
           feelingId: key,
           theme: meta?.chatTheme ?? "whatsapp-dizzy",
+          paidUnlocked: paidTeleconsultAccess.availablePasses > 0,
         },
       })
       return
@@ -850,135 +1083,6 @@ export default function Home() {
     setSelectedFeelings((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
 
-  function onTipDragStart(clientX: number) {
-    setTipInteracting(true)
-    tipTouchStartX.current = clientX
-  }
-
-  function onTipDragEnd(clientX: number) {
-    if (tipTouchStartX.current === null) return
-    const delta = clientX - tipTouchStartX.current
-    tipTouchStartX.current = null
-    if (Math.abs(delta) > 90) {
-      localStorage.setItem(TIP_FAST_SCROLL_KEY, String(Date.now()))
-      void logBehaviorSignal({
-        type: "tip_swipe_fast",
-        meta: { delta },
-      })
-    }
-    if (delta > 45) setTipIndex((prev) => (prev - 1 + displayTips.length) % displayTips.length)
-    if (delta < -45) setTipIndex((prev) => (prev + 1) % displayTips.length)
-    window.setTimeout(() => setTipInteracting(false), 900)
-  }
-
-  function openTip(tip: HealthTip) {
-    if (tip.id.startsWith("daily-") && dailyTips) {
-      localStorage.setItem(DAILY_TIP_STORAGE_KEY, JSON.stringify(dailyTips))
-    }
-    if (tip.tags[0]) localStorage.setItem(TIP_PREF_KEY, tip.tags[0])
-    void logBehaviorSignal({
-      type: "tip_open",
-      label: tip.title,
-      tags: tip.tags,
-      meta: { tipId: tip.id, mood: moodHint || null },
-    })
-    navigate(`/health-tips/${tip.id}`)
-  }
-
-  const companySession = getEmployeeCompanySession()
-  const hrContact = companySession?.companyName
-    ? `${companySession.companyName} HR Desk`
-    : "HR Desk"
-  const hrNumber = companySession?.hrPhone || localStorage.getItem("employee_hr_contact") || "1800-000-000"
-  const sosContacts = [
-    { label: hrContact, number: hrNumber, note: "Primary HR helpdesk" },
-    { label: "Police", number: "100", note: "Immediate police assistance" },
-    { label: "Ambulance", number: "108", note: "Emergency medical response" },
-  ]
-
-  function startSosAlarm() {
-    if (sosAlarmRef.current) return
-    const audio = sosAlarmAudioRef.current ?? new Audio(warningAlarm)
-    audio.loop = true
-    audio.volume = 0.75
-    audio.currentTime = 0
-    sosAlarmAudioRef.current = audio
-    audio.play().catch(() => undefined)
-    sosAlarmRef.current = window.setInterval(() => {
-      if (audio.paused) {
-        audio.play().catch(() => undefined)
-      }
-    }, 2000)
-    if ("vibrate" in navigator) {
-      navigator.vibrate(1200)
-      sosVibrateRef.current = window.setInterval(() => {
-        navigator.vibrate(1200)
-      }, 1600)
-    }
-  }
-
-  function stopSosAlarm() {
-    if (!sosAlarmRef.current) return
-    window.clearInterval(sosAlarmRef.current)
-    sosAlarmRef.current = null
-    const audio = sosAlarmAudioRef.current
-    if (audio) {
-      audio.pause()
-      audio.currentTime = 0
-    }
-    if (sosVibrateRef.current) {
-      window.clearInterval(sosVibrateRef.current)
-      sosVibrateRef.current = null
-      if ("vibrate" in navigator) {
-        navigator.vibrate(0)
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (!showSos) {
-      setSosRunning(false)
-      setSosStep(0)
-      setSosCountdown(null)
-      stopSosAlarm()
-      return
-    }
-    setSosRunning(false)
-    const interval = window.setInterval(() => {
-      setSosStep((prev) => (prev + 1) % sosContacts.length)
-    }, 8000)
-    return () => window.clearInterval(interval)
-  }, [showSos, sosContacts.length])
-
-  useEffect(() => {
-    if (!showSos || sosCountdown === null) return
-    if (sosCountdown <= 0) return
-    const timer = window.setTimeout(() => {
-      setSosCountdown((prev) => (prev !== null ? prev - 1 : null))
-    }, 1000)
-    return () => window.clearTimeout(timer)
-  }, [showSos, sosCountdown])
-
-  useEffect(() => {
-    if (!showSos || sosCountdown !== 0) return
-    setSosCountdown(null)
-    setSosRunning(true)
-    setSosStatus("dialing")
-    startSosAlarm()
-  }, [showSos, sosCountdown])
-
-  useEffect(() => {
-    if (!showSos || !sosRunning || sosCountdown !== null) return
-    const contact = sosContacts[sosStep]
-    if (!contact) return
-    setSosStatus("dialing")
-    const timer = window.setTimeout(() => {
-      setSosStatus("connecting")
-      window.location.href = `tel:${contact.number.replace(/\s/g, "")}`
-      window.setTimeout(() => setSosStatus("connected"), 1500)
-    }, 600)
-    return () => window.clearTimeout(timer)
-  }, [showSos, sosRunning, sosStep, sosContacts])
 
   useEffect(() => {
     const session = getEmployeeAuthSession()
@@ -1025,144 +1129,25 @@ export default function Home() {
     }
   }, [])
 
-  useEffect(() => {
-    const todayKey = new Date().toISOString().slice(0, 10)
-    const cachedDate = localStorage.getItem(DAILY_TIP_DATE_KEY)
-    const cachedTips = localStorage.getItem(DAILY_TIP_STORAGE_KEY)
-    if (cachedDate === todayKey && cachedTips) {
-      try {
-        const parsed = JSON.parse(cachedTips) as DailyTipPayload[]
-        if (parsed.length) {
-          setDailyTips(parsed)
-        }
-      } catch {
-        // ignore bad cache
-      }
-    } else {
-      localStorage.removeItem(DAILY_TIP_STORAGE_KEY)
-      localStorage.removeItem(DAILY_TIP_DATE_KEY)
-    }
-
-    const raw = localStorage.getItem("employee_geo")
-    const runDaily = async (lat?: number, lon?: number, city?: string) => {
-      try {
-        const daily = await fetchDailyTips({ lat, lon, city })
-        if (daily?.tips?.length) {
-          setDailyTips(daily.tips)
-          localStorage.setItem(DAILY_TIP_STORAGE_KEY, JSON.stringify(daily.tips))
-          localStorage.setItem(DAILY_TIP_DATE_KEY, todayKey)
-          return
-        }
-      } catch {
-        // fall through
-      }
-      if (!cachedTips) {
-        const localTips = buildLocalDailyTips(todayKey)
-        setDailyTips(localTips)
-        localStorage.setItem(DAILY_TIP_STORAGE_KEY, JSON.stringify(localTips))
-        localStorage.setItem(DAILY_TIP_DATE_KEY, todayKey)
-      }
-    }
-
-    if (!raw) {
-      void runDaily()
-      return
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as { lat?: number; lon?: number }
-      if (parsed?.lat && parsed?.lon) {
-        if (shouldSkipApi("weather")) {
-          const cached = localStorage.getItem(WEATHER_CACHE_KEY)
-          if (cached) {
-            try {
-              const parsedWeather = JSON.parse(cached) as WeatherSnapshot
-              setWeather(parsedWeather)
-            } catch {
-              // ignore cache parse errors
-            }
-          }
-          void runDaily(parsed.lat, parsed.lon)
-          return
-        }
-        fetchWeather(parsed.lat, parsed.lon)
-          .then((data) => {
-            setWeather(data)
-            localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(data))
-            markApiSuccess("weather")
-            return runDaily(parsed.lat, parsed.lon, data.location)
-          })
-          .catch(() => {
-            markApiFailure("weather")
-            const cached = localStorage.getItem(WEATHER_CACHE_KEY)
-            if (cached) {
-              try {
-                const parsedWeather = JSON.parse(cached) as WeatherSnapshot
-                setWeather(parsedWeather)
-              } catch {
-                // ignore cache parse errors
-              }
-            }
-            void runDaily(parsed.lat, parsed.lon)
-          })
-      } else {
-        void runDaily()
-      }
-    } catch {
-      void runDaily()
-    }
-  }, [])
 
   return (
     <main className="home-page app-page-enter" onScroll={handleScroll} ref={pageRef}>
       <section className="home-shell">
         <header className="topbar app-fade-stagger">
           <div className="brand">
-            <div className="brand-icon"><FiHeart /></div>
+            <div className="brand-icon brand-logo-mark"><img src="/logo.png" alt="Astikan" /></div>
             <div className="brand-copy">
-              <h1>{companySession?.companyName ?? "Astikan"}</h1>
+              <h1>Astikan</h1>
             </div>
           </div>
-
-          <button
-            className="sos-btn app-pressable"
-            type="button"
-            onClick={() => {
-              setShowSos(true)
-              setSosRunning(false)
-              setSosStep(0)
-              setSosStatus("dialing")
-              setSosCountdown(3)
-            }}
-          >
-            <FiShield />
-            <span>SOS</span>
-          </button>
-
-          <div className="header-actions">
+<div className="header-actions">
             <button className="icon-btn notify-btn app-pressable" aria-label="notifications" type="button" onClick={() => navigate("/notifications")}>
               <FiBell />
               {unreadCount > 0 && <span className="notify-count">{unreadCount}</span>}
             </button>
-            <button className="icon-btn profile-btn app-pressable" aria-label="profile" type="button" onClick={() => navigate("/profile-info")}>
-              <FiUser />
-            </button>
           </div>
         </header>
-
-        <nav className={`tabbar app-fade-stagger ${isTabDocked ? "docked" : ""}`}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`tab app-pressable ${activeTab === tab.id ? "active" : ""}`}
-              onClick={() => handleTabClick(tab.id)}
-              type="button"
-            >
-              <span className="tab-icon">{tabIcon(tab.icon)}</span>
-              <span>{tab.id}</span>
-            </button>
-          ))}
-        </nav>
+        <AppBottomNav active="Home" />
 
         <section className="medicine-hero app-fade-stagger">
           <div
@@ -1189,24 +1174,34 @@ export default function Home() {
             <div
               className="hero-track"
               style={{
-                transform: `translate3d(calc(-${heroIndex * 100}% + ${(-heroDragOffset / (heroDragWidth.current || 1)) * 100}%), 0, 0)`,
+                transform: `translate3d(calc(-${heroIndex * 100}% + ${(heroDragOffset / (heroDragWidth.current || 1)) * 100}%), 0, 0)`,
               }}
             >
               {heroSlides.map((slide) => (
-                <article key={slide.id} className={`medicine-hero-card hero-slide ${slide.tone}`}>
-                  <div className="medicine-hero-copy">
-                    <h2><strong>{slide.title}</strong> {slide.highlight}</h2>
-                    <p>{slide.subtitle}</p>
-                    <button
-                      className="medicine-hero-cta app-pressable"
-                      type="button"
-                      onClick={() => navigate(slide.route)}
-                    >
-                      {slide.cta}
-                    </button>
-                  </div>
-                  {renderHeroIllustration(slide.illustration)}
-                </article>
+                <button
+                  key={slide.id}
+                  className={`medicine-hero-card hero-slide hero-banner-card app-pressable ${slide.tone}`}
+                  type="button"
+                  onClick={() => handleHeroCta(slide)}
+                  aria-label={`${slide.title} ${slide.highlight}. ${slide.cta}`}
+                >
+                  {slide.bannerImage ? (
+                    <img
+                      className="hero-banner-image"
+                      src={slide.bannerImage}
+                      alt=""
+                      loading="lazy"
+                    />
+                  ) : (
+                    <>
+                      <div className={`medicine-hero-copy ${slide.compactSubtitle ? "compact-subtitle" : ""}`}>
+                        <h2><strong>{slide.title}</strong> {slide.highlight}</h2>
+                        <span className="medicine-hero-cta">{slide.cta}</span>
+                      </div>
+                      {renderHeroIllustration(slide.illustration)}
+                    </>
+                  )}
+                </button>
               ))}
             </div>
           </div>
@@ -1218,16 +1213,18 @@ export default function Home() {
             {quickAccess.map((item) => (
               <button
                 key={item.title}
-                className={`quick-card app-pressable ${item.tone}`}
+                className={`quick-card quick-card--${item.icon} app-pressable ${item.tone}`}
                 onClick={() => openQuickAccess(item.title)}
                 type="button"
               >
                 <div className="quick-top">
-                  <span className={`quick-icon ${item.icon === "stress" || item.icon === "lab" ? "bouncy" : ""}`}>{quickIcon(item.icon)}</span>
+                  <span className={`quick-icon ${item.icon === "lab" || item.icon === "insurance" ? "bouncy" : ""}`}>{quickIcon(item.icon)}</span>
                   {item.badge && <span className="badge">{item.badge}</span>}
                 </div>
-                <h4>{item.title}</h4>
-                {item.subtitle && <p>{item.subtitle}</p>}
+                <div className="quick-copy">
+                  <h4>{item.title}</h4>
+                  {item.subtitle && <p>{item.subtitle}</p>}
+                </div>
               </button>
             ))}
           </div>
@@ -1245,68 +1242,19 @@ export default function Home() {
               >
                 <span className="feeling-icon">{item.icon}</span>
                 <h4>{item.title}</h4>
-                <span className={`priority ${item.level}`}>{item.priority}</span>
+                <span className={`priority ${item.level}`}>
+                  {paidTeleconsultAccess.availablePasses > 0 ? `paid ${paidTeleconsultAccess.consultationMinutes} min` : item.priority}
+                </span>
               </button>
             ))}
           </div>
         </section>
 
-        <section className="section app-fade-stagger">
-          <div className="daily-tips-head">
-            <div>
-              <h3 className="section-title daily-tips-title">Daily Health Tips</h3>
-            </div>
-          </div>
-          <article
-            className="tip-swiper"
-            onMouseEnter={() => setTipInteracting(true)}
-            onMouseLeave={() => setTipInteracting(false)}
-            onTouchStart={(e) => onTipDragStart(e.changedTouches[0]?.clientX ?? 0)}
-            onTouchEnd={(e) => onTipDragEnd(e.changedTouches[0]?.clientX ?? 0)}
-          >
-            <div
-              className={`tip-track ${tipInteracting ? "dragging" : ""}`}
-              style={{
-                width: `${displayTips.length * 100}%`,
-                transform: `translate3d(-${tipIndex * 100}%, 0, 0)`,
-              }}
-            >
-              {displayTips.map((tip) => (
-                <section
-                  className="tip-card"
-                  key={tip.title}
-                  style={{ width: `${100 / displayTips.length}%` }}
-                  onClick={() => openTip(tip)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") openTip(tip)
-                  }}
-                >
-                  <div className="tip-header">
-                    <div className="tip-title-icon">
-                      <span className="tip-big-icon">{tip.icon}</span>
-                      <div>
-                        <h4>{tip.title}</h4>
-                        <div className="tip-tags">
-                          {tip.tags.map((tag) => (
-                            <span key={tag}>{tag}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <p>{tip.summary}</p>
-                </section>
-              ))}
-            </div>
-          </article>
-        </section>
 
         <section className="section app-fade-stagger">
           <h3 className="section-title">Health Metrics</h3>
           <div className="metric-grid">
-            {metricCardsWithBp.map((item) => (
+            {metricCardsWithVitals.map((item) => (
               <button
                 key={item.title}
                 className={`metric-card app-pressable ${item.tone}`}
@@ -1338,97 +1286,142 @@ export default function Home() {
           <div className="score-copy">
             <div className="score-head-row">
               <h3>Health Score</h3>
-              <span className="score-pill">Excellent</span>
+              <span className={`score-pill ${scoreMeta.tone}`}>{scoreMeta.label}</span>
             </div>
-            <p className="score">{displayScore}<span>/100</span></p>
-            <div className="score-progress" aria-hidden="true">
-              <span style={{ width: `${displayScore}%` }} />
+
+            <div className="score-body">
+              <div className="score-ring-wrap" aria-hidden="true">
+                <div
+                  className="score-ring"
+                  style={{ "--score-fill": `${displayScore}%` } as CSSProperties}
+                >
+                  <div className="score-ring-inner">
+                    <strong>{displayScore}</strong>
+                    <span>/100</span>
+                  </div>
+                </div>
+                <span className="score-orbit">
+                  <FiHeart />
+                </span>
+              </div>
+
+              <div className="score-summary">
+                <p className="score-caption">{scoreMeta.caption}</p>
+                <div className="score-progress" aria-hidden="true">
+                  <span style={{ width: `${displayScore}%` }} />
+                </div>
+                <div className="score-tags">
+                  {scoreMeta.tags.slice(0, 2).map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+                <small>{lastAction}</small>
+              </div>
             </div>
-            <p className="score-caption">Excellent health indicators. Keep up the good work!</p>
-            <div className="score-tags">
-              <span>Sleep +12%</span>
-              <span>Hydration on track</span>
-            </div>
-            <small>{lastAction}</small>
           </div>
-          <div className="score-icon"><FiHeart /></div>
         </section>
       </section>
 
-      {showSos && (
-        <div className="sos-overlay">
-          <section className="sos-modal app-page-enter" onClick={(e) => e.stopPropagation()}>
-            <header className="sos-head">
-              <div className="sos-head-left">
-                <span className="sos-head-icon"><FiShield /></span>
-                <div>
-                  <h3>Emergency</h3>
-                  <p>Get immediate help</p>
+      {showTeleUnlock && (
+        <div className="tele-unlock-overlay">
+          <section className="tele-unlock-card app-page-enter">
+            {teleUnlockedMessage ? (
+              <>
+                <div className="tele-unlock-success-wrap">
+                  <div className="tele-unlock-success-ring tele-unlock-success-ring-one" />
+                  <div className="tele-unlock-success-ring tele-unlock-success-ring-two" />
+                  <div className="tele-unlock-success">✓</div>
                 </div>
-              </div>
-            </header>
-
-            <div className="sos-body">
-              <div className="sos-call-core">
-                <span className="sos-call-icon"><FiPhoneCall /></span>
-                <h4>Emergency Call Flow</h4>
-                {sosCountdown !== null ? (
-                  <div className="sos-countdown">
-                    <span>{sosCountdown}</span>
-                    <small>Starting in</small>
-                  </div>
-                ) : (
-                  <>
-                    <div className="sos-step">
-                      Calling: <strong>{sosContacts[sosStep]?.label}</strong>
-                    </div>
-                    <div className={`sos-status ${sosStatus}`}>
-                      {sosStatus === "dialing" && "Dialing..."}
-                      {sosStatus === "connecting" && "Ringing..."}
-                      {sosStatus === "connected" && "Connected"}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="sos-contact-list">
-                {sosContacts.map((contact, index) => (
-                  <button
-                    key={contact.label}
-                    className={`sos-contact-row app-pressable ${index === sosStep ? "active" : ""}`}
-                    type="button"
-                    onClick={() => {
-                      setSosStep(index)
-                      window.location.href = `tel:${contact.number.replace(/\\s/g, "")}`
-                    }}
-                  >
-                    <div>
-                      <h5>{contact.label}</h5>
-                      <p>{contact.note}</p>
-                    </div>
-                    <span className="sos-number">{contact.number}</span>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                className="sos-next app-pressable"
-                type="button"
-                onClick={() => {
-                  stopSosAlarm()
-                  setSosRunning(false)
-                  setShowSos(false)
-                  setSosCountdown(null)
-                }}
-              >
-                Stop SOS
-              </button>
-
-            </div>
+                <h2>Unlocked Successfully</h2>
+                <p>Your doctor access details are saved. You can go back home now or start a consultation right away.</p>
+                <div className="tele-unlock-success-actions">
+                  <button className="tele-unlock-home-btn app-pressable" type="button" onClick={() => { setShowTeleUnlock(false); navigate("/home") }}>Back to Home</button>
+                  <button className="medicine-hero-cta app-pressable tele-unlock-consult-btn" type="button" onClick={() => { setShowTeleUnlock(false); navigate("/teleconsultation") }}>Consult Now</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="tele-unlock-kicker-static">Doctor Access Setup</div>
+                <h2>{teleUnlockQuestions[teleQuestionIndex].title}</h2>
+                <p>Choose the option that matches you best. We will save it instantly and move you ahead automatically.</p>
+                <div className="tele-unlock-options tele-unlock-options-single">
+                  {teleUnlockQuestions[teleQuestionIndex].options.map((option) => {
+                    const q = teleUnlockQuestions[teleQuestionIndex]
+                    const active = (teleAnswers[q.id] ?? []).includes(option)
+                    const meta = getTeleUnlockOptionMeta(q.id, option)
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`tele-unlock-option ${active ? "active" : ""}`}
+                        onClick={() => toggleTeleAnswer(q.id, option)}
+                      >
+                        <span className="tele-unlock-option-media" aria-hidden="true">{meta.icon}</span>
+                        <span className="tele-unlock-option-copy">
+                          <span>{option}</span>
+                          <strong>{meta.hint}</strong>
+                        </span>
+                        <span className="tele-unlock-option-arrow" aria-hidden="true">→</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </section>
         </div>
       )}
+
+      {showLabOfferUnlock && (
+        <div className="tele-unlock-overlay">
+          <section className="tele-unlock-card app-page-enter">
+            {labOfferResultMessage ? (
+              <>
+                <div className="tele-unlock-success-wrap">
+                  <div className="tele-unlock-success-ring tele-unlock-success-ring-one" />
+                  <div className="tele-unlock-success-ring tele-unlock-success-ring-two" />
+                  <div className={`tele-unlock-success ${labOffer.eligible ? "" : "lab-offer-fail"}`}>{labOffer.eligible ? "✓" : "!"}</div>
+                </div>
+                <h2>{labOffer.eligible ? "Checkup Unlocked" : "Oops!"}</h2>
+                <p>{labOfferResultMessage}</p>
+                <div className="tele-unlock-success-actions">
+                  <button className="tele-unlock-home-btn app-pressable" type="button" onClick={() => { setShowLabOfferUnlock(false); navigate("/home") }}>Back to Home</button>
+                  <button className="medicine-hero-cta app-pressable tele-unlock-consult-btn" type="button" onClick={() => { setShowLabOfferUnlock(false); navigate("/lab-tests") }}>{labOffer.eligible ? "Claim Now" : "Book Lab Tests"}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="tele-unlock-kicker-static">Free Checkup Eligibility</div>
+                <h2>{labOfferQuestions[labOfferQuestionIndex].title}</h2>
+                <p>Tell us a little about your daily routine. We will save it instantly and check your eligibility right away.</p>
+                <div className="tele-unlock-options tele-unlock-options-single">
+                  {labOfferQuestions[labOfferQuestionIndex].options.map((option) => {
+                    const q = labOfferQuestions[labOfferQuestionIndex]
+                    const active = (labOfferAnswers[q.id] ?? []).includes(option)
+                    const meta = getLabOfferOptionMeta(q.id, option)
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`tele-unlock-option ${active ? "active" : ""}`}
+                        onClick={() => toggleLabOfferAnswer(q.id, option)}
+                      >
+                        <span className="tele-unlock-option-media" aria-hidden="true">{meta.icon}</span>
+                        <span className="tele-unlock-option-copy">
+                          <span>{option}</span>
+                          <strong>{meta.hint}</strong>
+                        </span>
+                        <span className="tele-unlock-option-arrow" aria-hidden="true">→</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+
     </main>
   )
 }
-

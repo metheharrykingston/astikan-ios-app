@@ -1,0 +1,78 @@
+import { apiPost } from './api'
+
+type UserBootstrapResponse = {
+  companyId: string
+  userId: string
+  userCode: string
+  employeeUserId: string
+  employeeCode: string
+  email: string
+  phone?: string
+}
+
+const USER_ACTOR_KEY = 'astikan_user_actor'
+
+export async function ensureUserActor(input: {
+  companyReference?: string
+  companyName?: string
+  email?: string
+  phone?: string
+  fullName?: string
+  handle?: string
+  userCode?: string
+  employeeCode?: string
+}) {
+  const payload: any = input ?? {}
+
+  const readStored = (key: string): any => {
+    try {
+      const raw = localStorage.getItem(key) || sessionStorage.getItem(key)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  }
+
+  const auth = readStored("astikan_user_auth")
+  const company = readStored("astikan_user_company")
+
+  const userId = String(
+    auth?.userId ??
+    auth?.id ??
+    auth?.employeeId ??
+    auth?.user?.id ??
+    payload.userId ??
+    payload.employeeId ??
+    ""
+  ).trim()
+
+  const companyId = String(
+    payload.companyReference ??
+    payload.companyId ??
+    company?.companyId ??
+    auth?.companyId ??
+    "astikan-demo-company"
+  ).trim()
+
+  return {
+    companyId,
+    userId,
+    userCode: String(auth?.userCode ?? auth?.user_code ?? "").trim(),
+    employeeUserId: userId,
+    employeeCode: String(auth?.employeeCode ?? auth?.employee_code ?? "").trim(),
+    email: String(payload.email ?? auth?.email ?? "").trim(),
+    phone: String(payload.phone ?? auth?.phone ?? "").trim(),
+  } as any
+}
+
+export const ensureEmployeeActor = ensureUserActor
+
+export async function ensureDoctorActor(input: {
+  email?: string
+  phone?: string
+  fullName?: string
+  handle?: string
+  specialization?: string
+}) {
+  return apiPost<{ userId: string; email: string; fullName: string }, typeof input>('/doctors/bootstrap', input)
+}

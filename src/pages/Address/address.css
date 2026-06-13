@@ -1,0 +1,351 @@
+.address-page {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(203, 232, 255, 0.7), transparent 34%),
+    radial-gradient(circle at 100% 8%, rgba(232, 243, 255, 0.88), transparent 28%),
+    #f5f7fb;
+  color: #1f2940;
+  font-family: "Manrope", sans-serif;
+}
+
+.address-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: min(100%, var(--app-frame-width));
+  margin: 0 auto;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(245, 247, 251, 0.96);
+  border-bottom: 1px solid #dfe5f0;
+  backdrop-filter: blur(10px);
+}
+
+.address-back {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 0;
+  background: #e9edf5;
+  color: #2f3750;
+}
+
+.address-header h1 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-family: "Satoshi", sans-serif;
+}
+
+.address-header p {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: #657089;
+  line-height: 1.35;
+  max-width: 280px;
+}
+
+.address-shell {
+  width: min(100%, var(--app-frame-width));
+  margin: 0 auto;
+  padding: 18px 14px calc(34px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 14px;
+}
+
+.address-inline-state {
+  padding: 12px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.address-loading {
+  background: #eef4ff;
+  border: 1px solid #dbe5ff;
+  color: #3257b5;
+}
+
+.address-error {
+  background: #ffe8eb;
+  border: 1px solid #f5b2bb;
+  color: #b4232f;
+}
+
+.address-hero-card,
+.address-card {
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #e2e8f5;
+  padding: 16px;
+  box-shadow: 0 16px 34px rgba(22, 31, 50, 0.07);
+}
+
+.address-hero-card {
+  background:
+    radial-gradient(circle at top left, rgba(67, 121, 255, 0.16), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(255, 185, 113, 0.14), transparent 26%),
+    linear-gradient(135deg, #f7fbff, #eef6ff 54%, #fffaf3);
+  overflow: hidden;
+}
+
+.address-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.address-kicker {
+  color: #4f63a1;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.address-save-pill,
+.address-lock-pill {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #37507e;
+}
+
+.address-save-pill.saved,
+.address-lock-pill {
+  color: #157347;
+}
+
+.address-hero-card h2 {
+  margin: 0;
+  font-size: 1.22rem;
+  font-family: "Satoshi", sans-serif;
+}
+
+.address-hero-card p {
+  margin: 6px 0 0;
+  color: #637089;
+  font-size: 0.88rem;
+}
+
+.address-hero-stats {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.address-stat-tile {
+  border-radius: 18px;
+  padding: 12px;
+  border: 1px solid rgba(220, 228, 241, 0.95);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.address-stat-tile small {
+  display: block;
+  color: #75829a;
+  font-size: 0.73rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.address-stat-tile strong {
+  display: block;
+  color: #1f2940;
+  font-size: 0.9rem;
+}
+
+.address-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.address-card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.address-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #eff4ff, #f8fbff);
+  color: #3157b7;
+  box-shadow: inset 0 0 0 1px #d9e3ff;
+  flex-shrink: 0;
+}
+
+.address-card-icon.office {
+  color: #1e6a52;
+  background: linear-gradient(145deg, #edf9f2, #f8fffb);
+  box-shadow: inset 0 0 0 1px #d4efdf;
+}
+
+.address-card-title h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-family: "Satoshi", sans-serif;
+}
+
+.address-card-title p {
+  margin: 4px 0 0;
+  color: #6d7890;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.address-toolbar {
+  margin-bottom: 14px;
+}
+
+.gps-btn {
+  border: 1px solid #d7e3ff;
+  border-radius: 12px;
+  background: #f5f8ff;
+  color: #3157b7;
+  min-height: 40px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-weight: 800;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.address-form-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.address-form-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.address-form-grid span {
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.address-form-grid input {
+  border: 1px solid #d6dbe8;
+  border-radius: 14px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: #fff;
+  font-size: 0.95rem;
+  color: #1f2940;
+}
+
+.address-preview {
+  margin-top: 14px;
+  border-radius: 18px;
+  border: 1px solid #e5eaf3;
+  background: #f8fbff;
+  padding: 12px;
+}
+
+.address-preview span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6d7890;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.address-preview strong {
+  display: block;
+  margin-top: 8px;
+  color: #1f2940;
+  line-height: 1.45;
+  font-size: 0.92rem;
+  white-space: pre-line;
+}
+
+.address-actions {
+  margin-top: 14px;
+}
+
+.address-save-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  min-height: 46px;
+  background: linear-gradient(135deg, #3157b7, #5c7bff);
+  color: #fff;
+  font-weight: 800;
+}
+
+.address-save-btn:disabled {
+  opacity: 0.72;
+}
+
+.address-office-block {
+  border-radius: 18px;
+  border: 1px solid #e4eaf1;
+  background: #f9fbfd;
+  padding: 14px;
+}
+
+.address-office-block strong {
+  display: block;
+  color: #1f2940;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.address-office-block p {
+  margin: 6px 0 0;
+  color: #6d7890;
+  line-height: 1.45;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 380px) {
+  .address-header {
+    padding-inline: 14px;
+  }
+
+  .address-header p {
+    max-width: none;
+  }
+
+  .address-hero-top,
+  .address-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .address-hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .address-lock-pill,
+  .address-save-pill {
+    width: fit-content;
+  }
+}

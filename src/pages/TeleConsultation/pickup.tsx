@@ -3,6 +3,7 @@ import { FiArrowLeft, FiCheckCircle, FiMapPin } from "react-icons/fi"
 import { useLocation, useNavigate } from "react-router-dom"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
+import { getAddressSnapshot } from "../../services/addressStore"
 import "./pickup.css"
 
 type PickupDoctor = {
@@ -33,7 +34,8 @@ export default function OpdPickup() {
   const originMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null)
 
-  const address = useMemo(() => "A-47, Sector 62, Noida, Uttar Pradesh", [])
+  const { homeAddress } = getAddressSnapshot()
+  const address = useMemo(() => homeAddress || "Add your home address in Settings", [homeAddress])
   const destinationAddress = useMemo(() => {
     if (doctor?.practiceAddress) return doctor.practiceAddress
     return "Astikan OPD Clinic, Connaught Place, New Delhi"

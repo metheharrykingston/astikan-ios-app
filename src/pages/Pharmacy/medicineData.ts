@@ -7,11 +7,22 @@ export type MedicineItem = {
   image: string
   images?: string[]
   price?: number
+  mrp?: number
+  sellingPrice?: number
   overview: string
   uses: string[]
   doseGuide: string[]
   cautions: string[]
+  isExternal?: boolean
+  sourceUrl?: string
+  sourceDomain?: string
+  availabilityNote?: string
+  genericName?: string
+  useCase?: string
+  manufacturer?: string
 }
+
+export const EXTERNAL_MEDICINE_CACHE_KEY = "pharmacy_external_medicines_v1"
 
 type PharmacyProduct = {
   id: string
@@ -20,17 +31,50 @@ type PharmacyProduct = {
   category?: string | null
   description?: string | null
   base_price_inr: number
+  mrp_inr?: number
+  sp_inr?: number
   image_urls_json?: string[]
   available_qty?: number | null
   in_stock?: boolean
 }
 
-const fallbackImages = [
-  "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1626285861696-9f0bf5a49c6b?auto=format&fit=crop&w=900&q=80",
-]
+function buildAiMedicineImageDataUrl(label = "Astikan Care") {
+  const safe = label.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eff7ff"/>
+      <stop offset="52%" stop-color="#e6effc"/>
+      <stop offset="100%" stop-color="#fff2e7"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fbff"/>
+    </linearGradient>
+    <linearGradient id="bottle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff8d63"/>
+      <stop offset="100%" stop-color="#ff617b"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="132" cy="116" r="70" fill="#d8ebff"/>
+  <circle cx="650" cy="470" r="94" fill="#ffe3cc"/>
+  <rect x="160" y="110" width="480" height="380" rx="42" fill="url(#card)" stroke="#dbe8ff" stroke-width="4"/>
+  <rect x="214" y="186" width="172" height="220" rx="34" fill="url(#bottle)"/>
+  <rect x="250" y="150" width="100" height="42" rx="15" fill="#4276ff"/>
+  <rect x="246" y="256" width="108" height="58" rx="18" fill="#fff3db"/>
+  <rect x="290" y="266" width="20" height="38" rx="6" fill="#ff6d73"/>
+  <rect x="282" y="274" width="36" height="20" rx="6" fill="#3e72ff"/>
+  <rect x="438" y="188" width="146" height="48" rx="24" fill="#ebf4ff"/>
+  <rect x="438" y="252" width="120" height="18" rx="9" fill="#d6e7ff"/>
+  <rect x="438" y="288" width="98" height="18" rx="9" fill="#ffd9b8"/>
+  <rect x="438" y="332" width="136" height="18" rx="9" fill="#d6e7ff"/>
+  <text x="400" y="438" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#23406f">${safe}</text>
+  <text x="400" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="600" fill="#476081">Astikan Pharmacy</text>
+</svg>`.trim()
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
 
 function extractDose(text?: string | null) {
   if (!text) return "Standard"
@@ -47,8 +91,9 @@ function buildFallbackUses(name: string) {
   ]
 }
 
-export function mapProductToMedicine(product: PharmacyProduct, index = 0): MedicineItem {
-  const images = product.image_urls_json?.length ? product.image_urls_json : [fallbackImages[index % fallbackImages.length]]
+export function mapProductToMedicine(product: PharmacyProduct): MedicineItem {
+  const imageUrls = Array.isArray(product.image_urls_json) ? product.image_urls_json.filter(Boolean) : []
+  const images = imageUrls.length ? imageUrls : [buildAiMedicineImageDataUrl("Astikan Care")]
   const image = images[0]
   const overview = product.description ?? `${product.name} is curated for daily health support.`
   const inStock = typeof product.in_stock === "boolean"
@@ -66,6 +111,8 @@ export function mapProductToMedicine(product: PharmacyProduct, index = 0): Medic
     image,
     images,
     price: Number(product.base_price_inr ?? 0),
+    mrp: Number(product.mrp_inr ?? product.base_price_inr ?? 0),
+    sellingPrice: Number(product.sp_inr ?? product.base_price_inr ?? 0),
     overview,
     uses: buildFallbackUses(product.name),
     doseGuide: [
@@ -78,6 +125,30 @@ export function mapProductToMedicine(product: PharmacyProduct, index = 0): Medic
       "Stop use and seek care if you notice unusual reactions.",
     ],
   }
+}
+
+export function readExternalMedicines(): MedicineItem[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = window.sessionStorage.getItem(EXTERNAL_MEDICINE_CACHE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as MedicineItem[]
+    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item.id === "string") : []
+  } catch {
+    return []
+  }
+}
+
+export function saveExternalMedicine(item: MedicineItem) {
+  if (typeof window === "undefined") return
+  const existing = readExternalMedicines()
+  const next = [item, ...existing.filter((entry) => entry.id !== item.id)].slice(0, 20)
+  window.sessionStorage.setItem(EXTERNAL_MEDICINE_CACHE_KEY, JSON.stringify(next))
+}
+
+export function findExternalMedicineById(id?: string) {
+  if (!id) return undefined
+  return readExternalMedicines().find((item) => item.id === id)
 }
 
 export const medicines: MedicineItem[] = [
@@ -166,7 +237,7 @@ export const medicines: MedicineItem[] = [
     name: "Metformin",
     dose: "500mg",
     kind: "Tablet",
-    inStock: false,
+    inStock: true,
     image: "https://images.unsplash.com/photo-1576602975754-22f003188452?auto=format&fit=crop&w=900&q=80",
     overview: "Metformin is used for blood glucose control in type 2 diabetes management.",
     uses: ["Type 2 diabetes support", "Insulin resistance management"],

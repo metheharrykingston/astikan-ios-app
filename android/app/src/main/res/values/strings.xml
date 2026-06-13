@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Astikan</string>
+    <string name="title_activity_main">Astikan</string>
+    <string name="package_name">com.astikan.healthcare</string>
+    <string name="custom_url_scheme">com.astikan.healthcare</string>
+</resources>

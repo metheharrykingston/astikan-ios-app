@@ -1,6 +1,6 @@
-import { apiPost } from "./api"
+import { apiGet, apiPost } from "./api"
 
-export type EmployeeCompanyAuth = {
+export type UserCompanyAuth = {
   companyId: string
   companyCode: string
   companyName: string
@@ -8,9 +8,12 @@ export type EmployeeCompanyAuth = {
   hrPhone?: string | null
 }
 
-export type EmployeeLoginResponse = {
+export type UserLoginResponse = {
   userId: string
   role: string
+  token?: string
+  accessToken?: string
+  expiresAt?: string
   fullName?: string | null
   email?: string | null
   phone?: string | null
@@ -20,49 +23,82 @@ export type EmployeeLoginResponse = {
   companySlug?: string | null
 }
 
-const EMPLOYEE_AUTH_KEY = "astikan_employee_auth"
-const EMPLOYEE_COMPANY_KEY = "astikan_employee_company"
+const USER_AUTH_KEY = "astikan_user_auth"
+const USER_COMPANY_KEY = "astikan_user_company"
+
+function readStoredJson<T>(key: string): T | null {
+  const localRaw = localStorage.getItem(key)
+  const sessionRaw = sessionStorage.getItem(key)
+  const raw = localRaw || sessionRaw
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as T
+    if (!localRaw && sessionRaw) localStorage.setItem(key, sessionRaw)
+    return parsed
+  } catch {
+    return null
+  }
+}
 
 export function saveEmployeeCompanySession(payload: EmployeeCompanyAuth) {
-  localStorage.setItem(EMPLOYEE_COMPANY_KEY, JSON.stringify(payload))
+  const raw = JSON.stringify(payload)
+  localStorage.setItem(USER_COMPANY_KEY, raw)
+  sessionStorage.setItem(USER_COMPANY_KEY, raw)
 }
 
 export function getEmployeeCompanySession(): EmployeeCompanyAuth | null {
-  const raw = localStorage.getItem(EMPLOYEE_COMPANY_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as EmployeeCompanyAuth
-  } catch {
-    return null
-  }
+  return readStoredJson<EmployeeCompanyAuth>(USER_COMPANY_KEY)
 }
 
 export function saveEmployeeAuthSession(payload: EmployeeLoginResponse) {
-  localStorage.setItem(EMPLOYEE_AUTH_KEY, JSON.stringify(payload))
+  const raw = JSON.stringify(payload)
+  localStorage.setItem(USER_AUTH_KEY, raw)
+  sessionStorage.setItem(USER_AUTH_KEY, raw)
+  window.dispatchEvent(new Event("astikan-session-updated"))
 }
 
 export function getEmployeeAuthSession(): EmployeeLoginResponse | null {
-  const raw = localStorage.getItem(EMPLOYEE_AUTH_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as EmployeeLoginResponse
-  } catch {
-    return null
-  }
+  return readStoredJson<EmployeeLoginResponse>(USER_AUTH_KEY)
 }
 
 export function clearEmployeeAuthSession() {
-  localStorage.removeItem(EMPLOYEE_AUTH_KEY)
+  sessionStorage.removeItem(USER_AUTH_KEY)
+  localStorage.removeItem(USER_AUTH_KEY)
 }
 
 export function clearEmployeeCompanySession() {
-  localStorage.removeItem(EMPLOYEE_COMPANY_KEY)
+  sessionStorage.removeItem(USER_COMPANY_KEY)
+  localStorage.removeItem(USER_COMPANY_KEY)
 }
 
 export function authorizeEmployeeCompany(companyCode: string) {
-  return apiPost<EmployeeCompanyAuth, { companyCode: string }>("/auth/employee/company-authorize", { companyCode })
+  void companyCode
+  throw new Error("Company authorization is no longer used for user login.")
 }
 
-export function loginEmployee(email: string, password: string) {
-  return apiPost<EmployeeLoginResponse, { email: string; password: string }>("/auth/employee/login", { email, password })
+export function loginWithGoogle(credential: string) {
+  return apiPost<EmployeeLoginResponse, { credential: string }>("/auth/user/google", { credential })
 }
+
+export function requestPhoneOtp(phone: string) {
+  return apiPost<{ phone: string; deliveryStatus: string; message: string }, { phone: string }>("/auth/user/phone/request-otp", { phone })
+}
+
+export function verifyPhoneOtp(phone: string, otp: string) {
+  return apiPost<EmployeeLoginResponse, { phone: string; otp: string }>("/auth/user/phone/verify", { phone, otp })
+}
+
+export function loginWithFirebasePhone(idToken: string) {
+  return apiPost<EmployeeLoginResponse, { idToken: string }>("/auth/user/firebase-phone", { idToken })
+}
+
+export function loginWithFirebaseGoogle(idToken: string) {
+  return apiPost<EmployeeLoginResponse, { idToken: string }>("/auth/user/firebase-google", { idToken })
+}
+
+export function fetchAuthConfig() {
+  return apiGet<{ googleClientId: string; phoneOtpEnabled: boolean }>("/auth/config")
+}
+
+export type EmployeeCompanyAuth = UserCompanyAuth
+export type EmployeeLoginResponse = UserLoginResponse

@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["TEAM_ID.com.astikan.employee"],
+        "appIDs": ["TEAM_ID.com.astikan.healthcare"],
         "components": [
           { "/": "/home/*" },
           { "/": "/health/*" },

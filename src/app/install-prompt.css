@@ -12,6 +12,25 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
 }
 
+.install-banner--update {
+  bottom: 132px;
+  background: rgba(20, 28, 48, 0.98);
+  border: 1px solid rgba(130, 149, 255, 0.28);
+}
+
+.install-banner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.install-banner-top strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
 .install-banner p {
   margin: 0 0 10px;
   font-size: 13px;
@@ -37,7 +56,28 @@
   color: #fff;
 }
 
+.install-cta--update {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #735bff, #4a8cff);
+}
+
 .install-close {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
+}
+
+.install-close--icon {
+  min-height: 30px;
+  width: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.install-close--icon svg {
+  width: 16px;
+  height: 16px;
 }

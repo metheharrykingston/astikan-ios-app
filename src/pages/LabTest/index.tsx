@@ -14,12 +14,15 @@ import {
   FiZap,
 } from "react-icons/fi"
 import { useNavigate } from "react-router-dom"
-import { askAiChat, getAiLabReadinessQuestions, type ReadinessQuestion } from "../../services/aiApi"
+import { useLocation } from "react-router-dom"
+import { askAiChat } from "../../services/aiApi"
 import { useProcessLoading } from "../../app/process-loading"
-import { getCachedLabCatalog, getLabCatalog, preloadLabCatalog, type LabCatalogTest } from "../../services/labApi"
+import { buildStaticReadinessQuestions, getCachedLabCatalog, getLabCatalog, type LabCatalogTest } from "../../services/labApi"
 import "./labtest.css"
 
 type TestIcon = "blood" | "heart" | "hormone" | "sugar" | "vitamin" | "liver"
+
+function FiThermometerIcon() { return <FiActivity /> }
 
 type LabTestItem = {
   id: string
@@ -32,22 +35,57 @@ type LabTestItem = {
   fasting: string
   icon: TestIcon
   quick?: string
+  price?: number | null
 }
 
 const SYMPTOM_CHIPS = [
-  "Fever",
-  "Cough",
-  "Cold",
-  "Headache",
-  "Body Pain",
-  "High Sugar",
-  "High BP",
-  "Thyroid",
-  "Vitamin D",
-  "Fatigue",
-  "Allergy",
-  "Typhoid",
+  { label: "Fever", icon: <FiThermometerIcon /> },
+  { label: "Sugar", icon: <FiDroplet /> },
+  { label: "Thyroid", icon: <FiActivity /> },
+  { label: "Fatigue", icon: <FiZap /> },
+  { label: "Heart", icon: <FiHeart /> },
+  { label: "Vitamin", icon: <FiSun /> },
 ]
+
+
+function normalizeLabTestKey(test: any) {
+  const code = String(test?.code ?? test?.test_code ?? "").trim().toLowerCase()
+  const name = String(test?.name ?? test?.test_name ?? "").trim().toLowerCase()
+  const category = String(test?.tag ?? test?.category ?? "").trim().toLowerCase()
+
+  const cleanName = name
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\b(test|profile|package|panel)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+
+  return code || `${cleanName}:${category}`
+}
+
+function dedupeLabTests<T extends Record<string, any>>(tests: T[]): T[] {
+  const seen = new Set<string>()
+  const unique: T[] = []
+
+  for (const test of tests || []) {
+    const key = normalizeLabTestKey(test)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    unique.push(test)
+  }
+
+  return unique
+}
+
+const FALLBACK_LAB_TESTS: LabTestItem[] = [
+  { id: "fallback-cbc", code: "CBC", color: "red", name: "Complete Blood Count", desc: "Checks infection, anemia and general blood health", tag: "Blood Test", duration: "Same day", fasting: "No fasting required", icon: "blood", quick: "Popular" },
+  { id: "fallback-thyroid", code: "THY", color: "gray", name: "Thyroid Profile", desc: "T3, T4 and TSH thyroid screening", tag: "Hormone", duration: "24 hours", fasting: "No fasting required", icon: "hormone" },
+  { id: "fallback-hba1c", code: "HBA1C", color: "green", name: "HbA1c", desc: "Three month blood sugar average", tag: "Diabetes", duration: "Same day", fasting: "No fasting required", icon: "sugar", quick: "Quick" },
+  { id: "fallback-lipid", code: "LIPID", color: "blue", name: "Lipid Profile", desc: "Cholesterol and heart-risk screening", tag: "Heart", duration: "24 hours", fasting: "8-10 hours fasting preferred", icon: "heart" },
+  { id: "fallback-lft", code: "LFT", color: "green", name: "Liver Function Test", desc: "Liver enzymes and bilirubin screening", tag: "Liver", duration: "24 hours", fasting: "No fasting required", icon: "liver" },
+  { id: "fallback-vitd", code: "VITD", color: "outline", name: "Vitamin D", desc: "Vitamin D deficiency screening", tag: "Vitamin", duration: "24-48 hours", fasting: "No fasting required", icon: "vitamin" },
+]
+
 const SYMPTOM_KEYWORDS: Record<string, string[]> = {
   Typhoid: ["typhoid", "widal", "salmonella", "fever profile"],
   "High Sugar": ["hba1c", "blood sugar", "glucose", "diabetes"],
@@ -208,14 +246,17 @@ function toLabTestItem(item: LabCatalogTest): LabTestItem {
     fasting: "Preparation details available in test description",
     icon: mapCategoryToIcon(item.category),
     quick: item.reportingTime.toLowerCase().includes("same day") ? "Same day" : undefined,
+    price: Number.isFinite(Number(item.price)) ? Number(item.price) : null,
   }
 }
 
 export default function LabTestsStep1() {
-  const PAGE_SIZE = 10
+  const FETCH_LIMIT = 2000
+  const RENDER_BATCH = 20
   const navigate = useNavigate()
+  const { state } = useLocation() as { state?: { voiceQuery?: string } }
   const { start: startProcessLoading, stop: stopProcessLoading } = useProcessLoading()
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(() => state?.voiceQuery ?? "")
   const [allTests, setAllTests] = useState<LabTestItem[]>([])
   const [allCategories, setAllCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -224,8 +265,7 @@ export default function LabTestsStep1() {
   const [queryResolving, setQueryResolving] = useState(false)
   const [queryResolvedTests, setQueryResolvedTests] = useState<LabTestItem[] | null>(null)
   const [loadError, setLoadError] = useState("")
-  const [nextOffset, setNextOffset] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(RENDER_BATCH)
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [activeFilter, setActiveFilter] = useState<"All" | LabTestItem["tag"]>("All")
   const [modalTag, setModalTag] = useState<"All" | string>("All")
@@ -234,57 +274,62 @@ export default function LabTestsStep1() {
   const [aiFilteredTestIds, setAiFilteredTestIds] = useState<Set<string> | null>(null)
   const [selectingTestId, setSelectingTestId] = useState<string | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const pageRef = useRef<HTMLDivElement | null>(null)
+  const rootScrollRef = useRef<HTMLElement | null>(null)
   const searchCacheRef = useRef<Map<string, LabTestItem[]>>(new Map())
+  const autoFillAttemptsRef = useRef(0)
 
-  const fetchPage = useCallback(
-    async (offset: number, append: boolean) => {
-      if (append) {
-        setLoadingMore(true)
-      } else {
-        setLoading(true)
+  const fetchCatalog = useCallback(async () => {
+    setLoading(true)
+    setLoadError("")
+    try {
+      const cached = getCachedLabCatalog("", FETCH_LIMIT, 0)
+      const data = cached ?? (await getLabCatalog("", FETCH_LIMIT, 0))
+      const mappedTests = data.tests.map(toLabTestItem)
+      if (mappedTests.length === 0) {
+        setAllTests(FALLBACK_LAB_TESTS)
+        setAllCategories(Array.from(new Set(FALLBACK_LAB_TESTS.map((item) => item.tag))))
+        setVisibleCount(RENDER_BATCH)
+        return
       }
-      setLoadError("")
-
-      try {
-        const data =
-          offset === 0
-            ? await preloadLabCatalog("", PAGE_SIZE, 0)
-            : await getLabCatalog("", PAGE_SIZE, offset)
-
-        const mappedTests = data.tests.map(toLabTestItem)
-        const categories = data.categories.map((item) => item.name)
-
-      setAllCategories(categories)
-        setAllTests((prev) => (append ? [...prev, ...mappedTests] : mappedTests))
-        setNextOffset(offset + mappedTests.length)
-        setHasMore(offset + mappedTests.length < data.total && mappedTests.length > 0)
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Unable to load tests"
-        setLoadError(message)
-      } finally {
-        if (append) {
-          setLoadingMore(false)
-        } else {
-          setLoading(false)
-        }
-      }
-    },
-    []
-  )
+      const categories = data.categories.map((item) => item.name)
+      setAllCategories(Array.from(new Set(categories)))
+      setAllTests(mappedTests)
+      setVisibleCount(RENDER_BATCH)
+    } catch (error: unknown) {
+      const rawMessage = error instanceof Error ? error.message : "Unable to load tests"
+      const safeMessage =
+        /database service is not configured/i.test(rawMessage)
+          ? "Live catalog is refreshing. Showing the most booked tests."
+          : "Live catalog is refreshing. Showing the most booked tests."
+      setAllTests(FALLBACK_LAB_TESTS)
+      setAllCategories(Array.from(new Set(FALLBACK_LAB_TESTS.map((item) => item.tag))))
+      setVisibleCount(RENDER_BATCH)
+      setLoadError(safeMessage)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const cached = getCachedLabCatalog("", PAGE_SIZE, 0)
+    const cached = getCachedLabCatalog("", FETCH_LIMIT, 0)
     if (cached) {
       const mappedTests = cached.tests.map(toLabTestItem)
+      if (mappedTests.length === 0) {
+        setAllTests(FALLBACK_LAB_TESTS)
+        setAllCategories(Array.from(new Set(FALLBACK_LAB_TESTS.map((item) => item.tag))))
+        setVisibleCount(RENDER_BATCH)
+        setLoading(false)
+        return
+      }
       setAllTests(mappedTests)
-      setAllCategories(cached.categories.map((item) => item.name))
-      setNextOffset(mappedTests.length)
-      setHasMore(mappedTests.length < cached.total)
+      setAllCategories(Array.from(new Set(cached.categories.map((item) => item.name))))
+      setVisibleCount(RENDER_BATCH)
       setLoading(false)
       return
     }
-    void fetchPage(0, false)
-  }, [fetchPage])
+    void fetchCatalog()
+  }, [fetchCatalog])
 
   const availableTags = useMemo(() => {
     return ["All", ...allCategories] as const
@@ -368,32 +413,6 @@ export default function LabTestsStep1() {
           return
         }
 
-        if (q.length >= 3) {
-          const ai = await askAiChat({
-            message:
-              `User typed this while searching lab tests: "${q}". ` +
-              "Input may contain wrong spelling, symptom name, disease name, or medicine name. " +
-              "Map it to relevant lab tests and suggest only test names.",
-            history: [],
-          })
-          if (!active) return
-
-          await Promise.all(
-            (ai.suggestedTests ?? []).map(async (suggestion) => {
-              const keyword = suggestion.name.trim()
-              if (!keyword) return
-              try {
-                const bySuggestion = await getLabCatalog(keyword, 3, 0, controller.signal)
-                for (const item of bySuggestion.tests) {
-                  matches.set(item.id, toLabTestItem(item))
-                }
-              } catch {
-                // Ignore one failed suggestion and continue.
-              }
-            })
-          )
-        }
-
         const finalResults = matches.size > 0 ? Array.from(matches.values()) : []
         searchCacheRef.current.set(cacheKey, finalResults)
         setQueryResolvedTests(finalResults)
@@ -448,6 +467,13 @@ export default function LabTestsStep1() {
     queryResolvedTests,
   ])
 
+  const visibleTests = useMemo(
+    () => filteredTests.slice(0, Math.max(RENDER_BATCH, visibleCount)),
+    [filteredTests, visibleCount]
+  )
+
+  const hasMoreVisible = visibleCount < filteredTests.length
+
   const aiPrefill = useMemo(() => {
     const base = query.trim() ? `I have ${query.trim()}.` : "Help me choose the right lab test."
     const tagHint = activeFilter !== "All" ? ` Focus on ${activeFilter.toLowerCase()} options.` : ""
@@ -455,11 +481,27 @@ export default function LabTestsStep1() {
     return `${base}${tagHint}${quickHint} Suggest top 3 tests with reason and preparation.`
   }, [activeFilter, onlyQuick, query])
 
+  const triggerLoadMore = useCallback(() => {
+    if (loading || loadingMore || !hasMoreVisible || !!loadError || queryResolving || aiFiltering) {
+      return
+    }
+    setLoadingMore(true)
+    window.setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + RENDER_BATCH, filteredTests.length))
+      setLoadingMore(false)
+    }, 120)
+  }, [aiFiltering, filteredTests.length, hasMoreVisible, loadError, loading, loadingMore, queryResolving])
+
+  useEffect(() => {
+    rootScrollRef.current = document.getElementById("root")
+  }, [])
+
   useEffect(() => {
     const target = loadMoreRef.current
     if (!target) {
       return
     }
+    const root = rootScrollRef.current
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -467,17 +509,62 @@ export default function LabTestsStep1() {
         if (!entry?.isIntersecting) {
           return
         }
-        if (loading || loadingMore || !hasMore || !!loadError) {
-          return
-        }
-        void fetchPage(nextOffset, true)
+        triggerLoadMore()
       },
-      { rootMargin: "180px 0px" }
+      { root: root ?? null, rootMargin: "220px 0px" }
     )
 
     observer.observe(target)
     return () => observer.disconnect()
-  }, [fetchPage, hasMore, loadError, loading, loadingMore, nextOffset])
+  }, [triggerLoadMore])
+
+  useEffect(() => {
+    if (loading || loadingMore || !hasMoreVisible || !!loadError || queryResolving || aiFiltering || query.trim()) return
+    const tryAutofill = () => {
+      const container = rootScrollRef.current
+      const viewportHeight = container?.clientHeight || window.innerHeight || document.documentElement.clientHeight || 0
+      const contentHeight = container?.scrollHeight || document.documentElement.scrollHeight || 0
+      const visibleHeight = container?.clientHeight || viewportHeight
+      if (contentHeight <= visibleHeight + 180 && autoFillAttemptsRef.current < 6) {
+        autoFillAttemptsRef.current += 1
+        triggerLoadMore()
+      }
+    }
+    const id = window.setTimeout(tryAutofill, 120)
+    return () => window.clearTimeout(id)
+  }, [aiFiltering, hasMoreVisible, loadError, loading, loadingMore, query, queryResolving, triggerLoadMore, filteredTests.length])
+
+  useEffect(() => {
+    autoFillAttemptsRef.current = 0
+    setVisibleCount(RENDER_BATCH)
+  }, [query, activeFilter, onlyQuick, aiFilteredTestIds, queryResolvedTests])
+
+  useEffect(() => {
+    const onScroll = () => {
+      const container = rootScrollRef.current
+      if (container) {
+        const remaining = container.scrollHeight - (container.scrollTop + container.clientHeight)
+        if (remaining < 280) triggerLoadMore()
+        return
+      }
+      const doc = document.documentElement
+      const scrollTop = window.scrollY || doc.scrollTop || 0
+      const viewport = window.innerHeight || doc.clientHeight || 0
+      const fullHeight = Math.max(doc.scrollHeight || 0, document.body.scrollHeight || 0)
+      if (fullHeight - (scrollTop + viewport) < 240) {
+        triggerLoadMore()
+      }
+    }
+
+    rootScrollRef.current?.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('touchmove', onScroll, { passive: true })
+    return () => {
+      rootScrollRef.current?.removeEventListener('scroll', onScroll)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('touchmove', onScroll)
+    }
+  }, [triggerLoadMore])
 
   async function applyAiSymptomFilter(symptom: string) {
     setQuery(symptom)
@@ -560,19 +647,15 @@ export default function LabTestsStep1() {
   async function onSelectTest(test: LabTestItem) {
     setSelectingTestId(test.id)
     startProcessLoading()
+    document.documentElement.setAttribute("data-transition-direction", "forward")
+    await new Promise((resolve) => window.setTimeout(resolve, 140))
     try {
-      const readiness = await getAiLabReadinessQuestions({
-        testName: test.name,
-        fastingInfo: test.fasting,
-      })
       navigate("/lab-tests/readiness", {
         state: {
           selectedTest: test,
-          readinessQuestions: readiness.questions as ReadinessQuestion[],
+          readinessQuestions: buildStaticReadinessQuestions(test.name, test.fasting),
         },
       })
-    } catch {
-      navigate("/lab-tests/readiness", { state: { selectedTest: test } })
     } finally {
       setSelectingTestId(null)
       stopProcessLoading()
@@ -580,13 +663,13 @@ export default function LabTestsStep1() {
   }
 
   return (
-    <div className="lab-page lab-page--catalog">
+    <div className="lab-page lab-page--catalog" ref={pageRef}>
       <div className="lab-header">
         <button className="lab-back" onClick={() => navigate(-1)} type="button" aria-label="Back">
           <FiArrowLeft />
         </button>
         <div>
-          <h1>Lab Test Booking</h1>
+          <h1>Lab Test</h1>
           <p>Book tests & get reports online</p>
         </div>
       </div>
@@ -596,9 +679,7 @@ export default function LabTestsStep1() {
         <span>-</span>
         <div className="step pending">2. Location</div>
         <span>-</span>
-        <div className="step pending">3. Schedule</div>
-        <span>-</span>
-        <div className="step pending">4. Confirm</div>
+        <div className="step pending">3. Confirm</div>
       </div>
 
       <section className="lab-ai-finder">
@@ -616,8 +697,9 @@ export default function LabTestsStep1() {
         <p>Tell symptoms and AI suggests suitable tests with preparation guidance.</p>
         <div className="lab-symptom-chips">
           {SYMPTOM_CHIPS.map((chip) => (
-            <button key={chip} type="button" onClick={() => void applyAiSymptomFilter(chip)}>
-              {chip}
+            <button key={chip.label} type="button" className="lab-symptom-material" onClick={() => void applyAiSymptomFilter(chip.label)}>
+              <span>{chip.icon}</span>
+              {chip.label}
             </button>
           ))}
         </div>
@@ -626,7 +708,7 @@ export default function LabTestsStep1() {
       <div className="lab-search-box lab-search-box--rich">
         <FiSearch className="search-icon" />
         <input
-          placeholder="Search test or symptom (AI assisted)"
+          placeholder="Search test or symptom"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -663,10 +745,16 @@ export default function LabTestsStep1() {
       )}
 
       <div className="lab-list">
-        {loadError && (
+        {loadError && filteredTests.length > 0 && (
+          <div className="lab-soft-warning" role="status">
+            <FiShield /> <span>{loadError}</span>
+          </div>
+        )}
+
+        {loadError && filteredTests.length === 0 && (
           <div className="empty-state">
             <p>{loadError}</p>
-            <button type="button" onClick={() => window.location.reload()}>
+            <button type="button" onClick={() => void fetchCatalog()}>
               Retry
             </button>
           </div>
@@ -690,7 +778,7 @@ export default function LabTestsStep1() {
           </div>
         )}
 
-        {filteredTests.map((test) => (
+        {dedupeLabTests(visibleTests).map((test) => (
           <button
             key={test.id}
             className="lab-test-card"
@@ -755,9 +843,9 @@ export default function LabTestsStep1() {
           </div>
         )}
 
-        {!loading && !loadError && !aiFiltering && hasMore && filteredTests.length > 0 && (
+        {!loading && !loadError && !aiFiltering && hasMoreVisible && visibleTests.length > 0 && (
           <div className="lab-load-more-sentinel" ref={loadMoreRef}>
-            {loadingMore && <span className="lab-loading-spinner" aria-label="Loading more tests" />}
+            {loadingMore ? <span className="lab-loading-spinner" aria-label="Loading more tests" /> : null}
           </div>
         )}
       </div>

@@ -1,5 +1,4 @@
 import { useEffect } from "react"
-import { LuHeart } from "react-icons/lu"
 import AssessmentLayout from "../layout"
 
 type Props = {
@@ -16,7 +15,7 @@ export default function Welcome({ onNext }: Props) {
     <AssessmentLayout step={1} totalSteps={4} onNext={onNext} showNext={false}>
       <div className="welcome-step animate-in">
         <div className="pulse-circle">
-          <LuHeart aria-hidden="true" />
+          <img src="/logo.png" alt="Astikan" />
         </div>
 
         <h1>Let's understand your health</h1>

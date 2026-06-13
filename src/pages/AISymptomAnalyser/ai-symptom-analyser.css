@@ -47,9 +47,13 @@
 
 .symptom-flow-body {
   min-height: 100dvh;
-  padding: 86px 14px 18px;
+  padding: 98px 14px 18px;
   display: grid;
   align-content: start;
+}
+
+.symptom-flow-body .flow-card {
+  margin-top: 6px;
 }
 
 .flow-card {
@@ -111,8 +115,43 @@
   gap: 9px;
 }
 
+.recent-symptoms-block {
+  display: grid;
+  gap: 10px;
+}
+
+.recent-symptoms-head h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-family: "Satoshi", sans-serif;
+  color: #243454;
+}
+
+.recent-symptoms-head p {
+  margin: 4px 0 0;
+  color: #6c7b93;
+  font-size: 0.78rem;
+}
+
+.recent-symptoms-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recent-symptom-chip {
+  min-height: 36px;
+  border: 1px solid #d6e3f7;
+  border-radius: 999px;
+  background: #fff;
+  color: #3153b2;
+  padding: 0 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .symptom-card {
-  min-height: 64px;
+  min-height: 72px;
   border-radius: 16px;
   border: 1px solid #d6e3f7;
   background: #fff;
@@ -142,6 +181,6 @@
 
 @media (max-width: 400px) {
   .flow-option-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

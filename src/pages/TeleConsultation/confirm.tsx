@@ -15,6 +15,8 @@ type TeleBooking = {
   status?: string
   scheduledAt: string
   joinWindowStart: string
+  durationMinutes?: number
+  mode?: "tele" | "opd"
 }
 
 const TELE_BOOKINGS_KEY = "teleconsult_bookings"
@@ -32,7 +34,15 @@ function loadLatestBooking() {
 
 export default function TeleConfirm() {
   const navigate = useNavigate()
-  const { state } = useLocation() as { state?: { booking?: TeleBooking } }
+  const { state } = useLocation() as {
+    state?: {
+      booking?: TeleBooking
+      nextPickup?: boolean
+      doctor?: { id: string; name: string; specialty: string }
+      analysisQuery?: string
+      selectedSymptoms?: string[]
+    }
+  }
   const booking = state?.booking ?? loadLatestBooking()
 
   useEffect(() => {
@@ -72,7 +82,6 @@ export default function TeleConfirm() {
           </button>
           <div>
             <h1>Teleconsultation</h1>
-            <p>Booking confirmation</p>
           </div>
         </header>
         <section className="tele-confirm-card">
@@ -94,7 +103,6 @@ export default function TeleConfirm() {
         </button>
         <div>
           <h1>Teleconsultation</h1>
-          <p>Booking confirmation</p>
         </div>
       </header>
 
@@ -103,7 +111,7 @@ export default function TeleConfirm() {
           <FiCheckCircle />
         </div>
         <h2>Booking Confirmed</h2>
-        <p>Your consultation slot is locked in. Join will open 1 minute before time.</p>
+        <p>{booking.mode === "opd" ? "Your OPD visit is locked in. Continue to pickup and clinic directions next." : "Your consultation slot is locked in. Join will open 1 minute before time."}</p>
 
         <div className="tele-confirm-details">
           <div>
@@ -148,8 +156,18 @@ export default function TeleConfirm() {
           <button
             className="tele-confirm-primary"
             type="button"
-            disabled={!booking.sessionId}
-            onClick={() =>
+            disabled={booking.mode !== "opd" && !booking.sessionId}
+            onClick={() => {
+              if (booking.mode === "opd" || state?.nextPickup) {
+                navigate("/teleconsultation/pickup", {
+                  state: {
+                    doctor: state?.doctor ?? { id: booking.doctorId, name: booking.doctorName, specialty: booking.specialty },
+                    analysisQuery: state?.analysisQuery,
+                    selectedSymptoms: state?.selectedSymptoms,
+                  },
+                })
+                return
+              }
               navigate("/teleconsultation", {
                 state: {
                   startVideo: true,
@@ -158,9 +176,9 @@ export default function TeleConfirm() {
                   scheduledAt: booking.scheduledAt,
                 },
               })
-            }
+            }}
           >
-            {joinReady ? "Join Call" : "Join When Ready"}
+            {booking.mode === "opd" ? "Continue to Pickup" : joinReady ? "Join Call" : "Join When Ready"}
           </button>
         </div>
       </section>

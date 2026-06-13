@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#062f3c" />
+  <meta name="description" content="Install Astikan, the user health, lab, pharmacy, teleconsultation and wellness app." />
+  <meta property="og:title" content="Install Astikan" />
+  <meta property="og:description" content="Employee health services, attendance, labs, pharmacy, teleconsultation, wallet, loyalty and wellness challenges." />
+  <meta property="og:image" content="https://app.astikan.tech/assets/astikan-app-screenshot.webp" />
+  <title>Install Astikan</title>
+  <link rel="icon" href="assets/astikan-privilege-icon.webp" />
+  <style>
+    :root {
+      --bg: #04131b;
+      --panel: rgba(255,255,255,.08);
+      --panel-strong: rgba(255,255,255,.13);
+      --line: rgba(255,255,255,.16);
+      --ink: #ffffff;
+      --muted: #c9d8e8;
+      --soft: #7b8da3;
+      --accent: #4ade80;
+      --accent-2: #22d3ee;
+      --card: #ffffff;
+      --card-ink: #0f172a;
+      --card-muted: #64748b;
+      --shadow: 0 30px 90px rgba(0,0,0,.38);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(34,211,238,.28), transparent 32%),
+        radial-gradient(circle at 88% 14%, rgba(74,222,128,.22), transparent 30%),
+        linear-gradient(145deg, #020617 0%, #052230 48%, #020617 100%);
+    }
+    a { color: inherit; }
+    .page { width: min(1180px, 94vw); margin: 0 auto; padding: 22px 0 42px; }
+    .topbar {
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand img { width: 46px; height: 46px; border-radius: 14px; object-fit: cover; background: #fff; }
+    .brand-title { display: flex; flex-direction: column; line-height: 1.05; }
+    .brand-title strong { font-size: 16px; letter-spacing: -.02em; }
+    .brand-title span { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: #dff7ef;
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(330px, 500px);
+      gap: 34px;
+      align-items: center;
+      min-height: calc(100vh - 124px);
+      padding: 26px 0 36px;
+    }
+    .hero-copy { max-width: 660px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(74,222,128,.3);
+      background: rgba(74,222,128,.1);
+      color: #d9ffe6;
+      border-radius: 999px;
+      padding: 9px 13px;
+      font-size: 13px;
+      font-weight: 750;
+    }
+    h1 {
+      margin: 18px 0 14px;
+      font-size: clamp(42px, 7vw, 82px);
+      line-height: .92;
+      letter-spacing: -.07em;
+    }
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(16px, 2vw, 19px);
+      line-height: 1.72;
+      max-width: 620px;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 16px; }
+    button, .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 20px;
+      font-weight: 850;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 50px;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    button:hover, .btn:hover { transform: translateY(-1px); }
+    .primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #052230;
+      box-shadow: 0 20px 44px rgba(34,211,238,.24);
+    }
+    .secondary { background: var(--panel); color: #fff; border: 1px solid var(--line); }
+    .notice {
+      display: none;
+      max-width: 620px;
+      color: #bcd4e9;
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 10px 0 0;
+    }
+    body[data-device="ios"] .notice.ios,
+    body[data-device="android"] .notice.android,
+    body[data-device="desktop"] .notice.desktop { display: block; }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 28px;
+    }
+    .feature {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.075);
+      border-radius: 20px;
+      padding: 14px;
+      min-height: 112px;
+    }
+    .feature b { display: block; font-size: 14px; margin-bottom: 6px; }
+    .feature span { display: block; color: #b7c7d9; font-size: 12.5px; line-height: 1.45; }
+    .device-shell {
+      position: relative;
+      justify-self: center;
+      width: min(430px, 100%);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 42px;
+      padding: 14px;
+      background: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
+      box-shadow: var(--shadow);
+    }
+    .device-shell::before {
+      content: "";
+      position: absolute;
+      width: 96px;
+      height: 5px;
+      border-radius: 99px;
+      background: rgba(255,255,255,.4);
+      top: 9px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+    .screen-card {
+      border-radius: 32px;
+      overflow: hidden;
+      background: #eef6ff;
+      aspect-ratio: 9 / 16;
+      position: relative;
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    .screen-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .fallback {
+      display: none;
+      position: absolute;
+      inset: 0;
+      padding: 24px;
+      color: #0f172a;
+      background: #f8fbff;
+    }
+    .fallback.active { display: block; }
+    .fallback h2 { margin: 70px 0 8px; color: #0f172a; font-size: 26px; letter-spacing: -.04em; }
+    .mini-card { background: #fff; border: 1px solid #dce7f7; border-radius: 18px; padding: 14px; margin-top: 12px; color: #334155; font-size: 13px; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .step { border: 1px solid var(--line); background: rgba(255,255,255,.06); border-radius: 20px; padding: 14px; }
+    .step b { display: block; font-size: 13px; margin-bottom: 6px; }
+    .step span { color: #aec4dc; font-size: 12.5px; line-height: 1.45; }
+    footer { color: #8ea4ba; font-size: 12px; padding-top: 8px; }
+    @media (max-width: 920px) {
+      .hero { grid-template-columns: 1fr; min-height: auto; }
+      .device-shell { order: -1; width: min(360px, 92vw); }
+      .feature-grid, .steps { grid-template-columns: 1fr; }
+      .actions > * { flex: 1 1 220px; }
+      h1 { font-size: clamp(38px, 13vw, 62px); }
+      .topbar { align-items: flex-start; }
+      .pill { display: none; }
+    }
+  </style>
+</head>
+<body data-device="desktop">
+  <main class="page">
+    <header class="topbar">
+      <div class="brand">
+        <img src="assets/astikan-logo.webp" alt="Astikan logo" />
+        <div class="brand-title">
+          <strong>Astikan</strong>
+          <span>Employee Health & Benefits App</span>
+        </div>
+      </div>
+      <span class="pill">Installable PWA • Android • iOS • Desktop</span>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">For Astikan privileged corporate members</span>
+        <h1>Install Astikan</h1>
+        <p class="lead">Use Google sign-in or phone verification to access health services, lab tests, pharmacy, teleconsultation and wellness support from one secure app.</p>
+
+        <div class="actions">
+          <button id="installBtn" class="primary" type="button">Install App</button>
+          <a class="btn secondary" href="https://app.astikan.tech">Open Web App</a>
+        </div>
+
+        <p class="notice ios">iPhone/iPad: open this page in Safari, tap <b>Share</b>, then choose <b>Add to Home Screen</b>.</p>
+        <p class="notice android">Android: tap <b>Install App</b>. If the prompt does not appear, open Chrome menu and choose <b>Add to Home screen</b>.</p>
+        <p class="notice desktop">Desktop: use the Chrome/Edge install icon in the address bar, or open the web app directly.</p>
+
+        <div class="feature-grid" aria-label="Astikan features">
+          <div class="feature"><b>Attendance</b><span>Mark and track company-bound attendance through the employee app.</span></div>
+          <div class="feature"><b>Lab Tests</b><span>Search and book catalog tests such as CBC, thyroid and glucose.</span></div>
+          <div class="feature"><b>Pharmacy</b><span>Order medicines and track Astikan service savings.</span></div>
+          <div class="feature"><b>Teleconsultation</b><span>Book video consultations connected to doctor workflows.</span></div>
+          <div class="feature"><b>Wallet & Loyalty</b><span>Use benefits, wallet, cashback and loyalty-linked service flows.</span></div>
+          <div class="feature"><b>Wellness Challenges</b><span>Water, sleep, steps, no sugar, post-meal walk and more.</span></div>
+        </div>
+
+        <div class="steps">
+          <div class="step"><b>1. Open install link</b><span>Use the link received in your Astikan welcome email or WhatsApp message.</span></div>
+          <div class="step"><b>2. Add to device</b><span>Install the PWA from browser prompt or add it to the home screen.</span></div>
+          <div class="step"><b>3. Sign in</b><span>Sign in with Google or verify your phone number.</span></div>
+        </div>
+      </div>
+
+      <aside class="device-shell" aria-label="Astikan app screenshot">
+        <div class="screen-card">
+          <img src="assets/astikan-app-screenshot.webp" alt="Astikan app screenshot" onerror="this.style.display='none'; this.nextElementSibling.classList.add('active');" />
+          <div class="fallback">
+            <h2>Astikan</h2>
+            <div class="mini-card">Attendance • Health services • Benefits</div>
+            <div class="mini-card">Labs • Pharmacy • Teleconsultation</div>
+            <div class="mini-card">Wallet • Loyalty • Wellness Challenges</div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <footer>Astikan Healthcare • Secure patient access • app.astikan.tech</footer>
+  </main>
+
+  <script>
+    const EMPLOYEE_APP_URL = "https://app.astikan.tech";
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    document.body.dataset.device = isIOS ? "ios" : isAndroid ? "android" : "desktop";
+
+    let deferredPrompt = null;
+    const installBtn = document.getElementById("installBtn");
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      installBtn.textContent = "Install App";
+    });
+
+    installBtn.addEventListener("click", async () => {
+      if (isIOS) {
+        alert("On iPhone/iPad, open this page in Safari, tap Share, then Add to Home Screen.");
+        return;
+      }
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        return;
+      }
+      window.location.href = EMPLOYEE_APP_URL;
+    });
+  </script>
+</body>
+</html>

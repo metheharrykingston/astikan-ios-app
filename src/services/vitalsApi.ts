@@ -2,7 +2,7 @@ import { apiPost } from "./api"
 import { getEmployeeAuthSession, getEmployeeCompanySession } from "./authApi"
 
 type VitalPayload = {
-  metric: "heart_rate" | "blood_pressure_sys" | "blood_pressure_dia" | "blood_sugar"
+  metric: "heart_rate" | "blood_pressure_sys" | "blood_pressure_dia" | "blood_sugar" | "calories"
   value: number
   unit: string
   source: "camera" | "device" | "manual"

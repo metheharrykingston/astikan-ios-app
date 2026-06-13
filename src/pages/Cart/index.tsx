@@ -1,24 +1,25 @@
-﻿import { FiArrowLeft, FiGift, FiMinus, FiPlus, FiShoppingBag, FiTrash2, FiTruck } from "react-icons/fi"
+import { FiArrowLeft, FiMinus, FiPlus, FiShoppingBag, FiTrash2 } from "react-icons/fi"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useCart } from "../../app/cart"
 import { fetchPharmacyProducts, lookupPharmacyProducts } from "../../services/pharmacyApi"
-import { mapProductToMedicine, medicines, type MedicineItem } from "../Pharmacy/medicineData"
-import { playAppSound } from "../../utils/sound"
+import { mapProductToMedicine, type MedicineItem } from "../Pharmacy/medicineData"
+import AppBottomNav from "../../components/AppBottomNav"
 import "./cart.css"
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export default function CartPage() {
   const navigate = useNavigate()
   const { items, totalItems, removeItem, updateQty, addItem, syncItems } = useCart()
-  const primaryAddress = localStorage.getItem("employee_primary_address") ?? "Home"
   const [catalog, setCatalog] = useState<MedicineItem[]>([])
+  const [catalogLoading, setCatalogLoading] = useState(true)
   const idsKey = useMemo(() => items.map((item) => item.id).sort().join("|"), [items])
   const hasOutOfStock = items.some((item) => !item.inStock)
 
   const upsells = useMemo(() => {
     const ids = new Set(items.map((item) => item.id))
-    const source = catalog.length ? catalog : medicines
-    return source.filter((item) => !ids.has(item.id)).slice(0, 3)
+    return catalog.filter((item) => !ids.has(item.id)).slice(0, 3)
   }, [items, catalog])
 
 
@@ -28,9 +29,11 @@ export default function CartPage() {
       try {
         const rows = await fetchPharmacyProducts({ limit: 24, audience: "employee" })
         if (!active || !rows?.length) return
-        setCatalog(rows.map((row, index) => mapProductToMedicine(row, index)))
+        setCatalog(rows.map((row) => mapProductToMedicine(row)))
       } catch {
         if (active) setCatalog([])
+      } finally {
+        if (active) setCatalogLoading(false)
       }
     }
     loadCatalog()
@@ -43,10 +46,12 @@ export default function CartPage() {
     let active = true
     async function syncCart() {
       if (!idsKey) return
+      const lookupIds = idsKey.split("|").filter((id) => UUID_RE.test(id))
+      if (!lookupIds.length) return
       try {
-        const rows = await lookupPharmacyProducts(idsKey.split("|").filter(Boolean), "employee")
+        const rows = await lookupPharmacyProducts(lookupIds, "employee")
         if (!active || !rows?.length) return
-        const mapped = rows.map((row, index) => mapProductToMedicine(row, index))
+        const mapped = rows.map((row) => mapProductToMedicine(row))
         syncItems(
           mapped.map((item) => ({
             id: item.id,
@@ -76,19 +81,11 @@ export default function CartPage() {
         </button>
         <div>
           <h1>Your Cart</h1>
-          <p>{totalItems} items â€¢ delivery in 10 mins</p>
+          <p>{totalItems} items</p>
         </div>
       </header>
 
       <section className="cart-content app-content-slide">
-        <article className="cart-banner app-fade-stagger">
-          <FiTruck />
-          <div>
-            <strong>Fast doorstep delivery</strong>
-            <p>On-time fulfillment with verified pharmacy handling</p>
-          </div>
-        </article>
-
         {items.length === 0 && (
           <article className="cart-empty app-fade-stagger">
             <FiShoppingBag />
@@ -97,12 +94,9 @@ export default function CartPage() {
             <button
               className="app-pressable"
               type="button"
-              onClick={() => {
-                playAppSound("tap")
-                navigate("/pharmacy")
-              }}
+onClick={() => navigate("/pharmacy")}
             >
-              Browse Pharmacy
+              Browse Medicines
             </button>
           </article>
         )}
@@ -126,10 +120,7 @@ export default function CartPage() {
                   <button
                     type="button"
                     className="cart-remove app-pressable"
-                    onClick={() => {
-                      playAppSound("error")
-                      removeItem(item.id)
-                    }}
+onClick={() => removeItem(item.id)}
                     aria-label={`Remove ${item.name}`}
                   >
                     <FiTrash2 />
@@ -138,10 +129,7 @@ export default function CartPage() {
                     <button
                       type="button"
                       className="app-pressable"
-                      onClick={() => {
-                        playAppSound("tap")
-                        updateQty(item.id, item.qty - 1)
-                      }}
+onClick={() => updateQty(item.id, item.qty - 1)}
                       aria-label={`Decrease ${item.name}`}
                     >
                       <FiMinus />
@@ -150,10 +138,7 @@ export default function CartPage() {
                     <button
                       type="button"
                       className="app-pressable"
-                      onClick={() => {
-                        playAppSound("tap")
-                        updateQty(item.id, item.qty + 1)
-                      }}
+onClick={() => updateQty(item.id, item.qty + 1)}
                       aria-label={`Increase ${item.name}`}
                     >
                       <FiPlus />
@@ -165,72 +150,58 @@ export default function CartPage() {
           </section>
         )}
 
-        <section className="cart-upsells app-fade-stagger">
-          <div className="upsells-head">
-            <h3>Add More Essentials</h3>
-            <p>Frequently added together</p>
-          </div>
-          <div className="upsells-grid">
-            {upsells.map((item) => (
-              <article key={item.id} className="upsell-row">
-                <button type="button" className="upsell-link app-pressable" onClick={() => navigate(`/pharmacy/medicine/${item.id}`)}>
-                  <img src={item.image} alt={item.name} loading="lazy" />
-                  <div>
-                    <h4>{item.name}</h4>
-                    <p>{item.dose}</p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="upsell-add app-pressable"
-                  onClick={() => {
-                    addItem(item)
-                    playAppSound("success")
-                  }}
-                  disabled={!item.inStock}
-                >
-                  {item.inStock ? "Add" : "Out"}
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
+        {(catalogLoading || upsells.length > 0) && (
+          <section className="cart-upsells app-fade-stagger">
+            <div className="upsells-head">
+              <h3>Essential Supplies</h3>
+            </div>
+            {catalogLoading ? (
+              <p className="cart-live-loading">Loading live medicine stock...</p>
+            ) : (
+              <div className="upsells-grid">
+                {upsells.map((item) => (
+                  <article key={item.id} className="upsell-row">
+                    <button type="button" className="upsell-link app-pressable" onClick={() => navigate(`/pharmacy/medicine/${item.id}`)}>
+                      <img src={item.image} alt={item.name} loading="lazy" />
+                      <div>
+                        <h4>{item.name}</h4>
+                        <p>{item.dose}</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className="upsell-add app-pressable"
+                      onClick={() => addItem(item)}
+                      disabled={!item.inStock}
+                    >
+                      {item.inStock ? "Add" : "Out"}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </section>
 
       {items.length > 0 && (
         <footer className="cart-footer app-fade-stagger">
-          <div className="coupon">
-            <FiGift />
-            <span>Priority dispatch and secure packaging enabled</span>
-          </div>
           {hasOutOfStock && (
             <div className="cart-stock-alert">
               Some items are out of stock. Remove or replace them to continue.
             </div>
           )}
-          <div className="bill">
-            <div className="cart-delivery-banner">
-              <div>
-                <h4>Delivery in 15 mins</h4>
-                <p>Delivering to {primaryAddress}</p>
-              </div>
-              <span className="delivery-badge">Fast</span>
-            </div>
-          </div>
           <button
             type="button"
             className="checkout-btn app-pressable"
             disabled={hasOutOfStock}
-            onClick={() => {
-              playAppSound("notify")
-              navigate("/pharmacy/checkout")
-            }}
+onClick={() => navigate("/pharmacy/checkout")}
           >
             Proceed to checkout
           </button>
         </footer>
       )}
+      <AppBottomNav active="Cart" />
     </main>
   )
 }
-

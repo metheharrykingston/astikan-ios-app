@@ -11,6 +11,11 @@ import "./assessment.css"
 const FINAL_STEP = 4
 const ASSESSMENT_DONE_KEY = "astikan_assessment_done"
 
+function markAssessmentDone() {
+  localStorage.setItem(ASSESSMENT_DONE_KEY, "1")
+  sessionStorage.setItem(ASSESSMENT_DONE_KEY, "1")
+}
+
 export default function HealthAssessment() {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
@@ -27,7 +32,7 @@ export default function HealthAssessment() {
             typeof metrics.weightKg === "number" ||
             typeof metrics.waistCm === "number")
         if (hasBaseline) {
-          localStorage.setItem(ASSESSMENT_DONE_KEY, "1")
+          markAssessmentDone()
           navigate("/home")
         }
       })
@@ -38,7 +43,10 @@ export default function HealthAssessment() {
   }, [navigate])
 
   useEffect(() => {
-    if (localStorage.getItem(ASSESSMENT_DONE_KEY)) {
+    const sessionDone = sessionStorage.getItem(ASSESSMENT_DONE_KEY)
+    const localDone = localStorage.getItem(ASSESSMENT_DONE_KEY)
+    if (sessionDone || localDone) {
+      if (!sessionDone && localDone) sessionStorage.setItem(ASSESSMENT_DONE_KEY, localDone)
       navigate("/home")
       return
     }
@@ -46,7 +54,7 @@ export default function HealthAssessment() {
     if (step < FINAL_STEP) return
 
     const timer = window.setTimeout(() => {
-      localStorage.setItem(ASSESSMENT_DONE_KEY, "1")
+      markAssessmentDone()
       navigate("/home")
     }, 1600)
 

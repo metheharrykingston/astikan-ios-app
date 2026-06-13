@@ -58,7 +58,7 @@ function normalizeItem(item: any): AppNotification {
     time: item.time ?? new Date(item.createdAt ?? Date.now()).toLocaleString(),
     group: item.group ?? "Today",
     unread: Boolean(item.unread),
-    cta: item.cta ?? null,
+    cta: item.cta ? { label: item.cta.label || (String(item.cta.route || "").startsWith("http") ? "Download PDF" : "Open"), route: item.cta.route } : null,
     teleconsultSessionId: item.teleconsultSessionId ?? item.meta?.teleconsultSessionId ?? null,
     doctorId: item.doctorId ?? item.meta?.doctorId ?? null,
     scheduledAt: item.scheduledAt ?? item.meta?.scheduledAt ?? null,
@@ -134,8 +134,8 @@ export async function pushBrowserNotification(title: string, body: string) {
     if (reg) {
       await reg.showNotification(title, {
         body,
-        icon: "/icons/icon-192.png",
-        badge: "/icons/icon-192.png",
+        icon: "/logo.png",
+        badge: "/logo.png",
       })
       return true
     }

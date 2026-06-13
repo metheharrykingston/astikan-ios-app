@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, type ReactElement } from "react"
-import { FiActivity, FiArrowLeft, FiCamera, FiDroplet, FiHeart, FiZap } from "react-icons/fi"
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react"
+import { FiActivity, FiArrowDownRight, FiArrowLeft, FiArrowUpRight, FiCalendar, FiCamera, FiCheckCircle, FiDroplet, FiHeart, FiPlayCircle, FiShield, FiTrendingUp, FiX, FiZap } from "react-icons/fi"
 import { useNavigate, useParams } from "react-router-dom"
 import { getLatestVital, getVitalHistory, saveVitalReading } from "../../services/vitalsApi"
+import { getStressHistory } from "../../services/stressApi"
 import "./metric-details.css"
 
 type WindowKey = "7D" | "14D" | "30D"
+type BloodPressurePoint = { sys: number; dia: number; eventAt: string }
 
 type MetricConfig = {
   title: string
@@ -32,7 +34,7 @@ type MealEntry = {
 
 const details: Record<string, MetricConfig> = {
   "heart-rate": {
-    title: "Heart Rate",
+    title: "Daily Heartbeat Tracker",
     current: "72",
     unit: "bpm",
     subtitle: "Within healthy resting range",
@@ -91,6 +93,21 @@ const details: Record<string, MetricConfig> = {
     },
     tips: ["Log readings at the same time daily", "Limit sugary snacks", "Walk after meals to stabilize glucose"],
   },
+  meditation: {
+    title: "Meditation Analysis",
+    current: "12",
+    unit: "mins",
+    subtitle: "Short calm sessions tracked",
+    insight: "Short quiet sessions help settle the body and reduce mental noise through the day.",
+    icon: <FiHeart />,
+    tone: "red",
+    windows: {
+      "7D": [5, 8, 0, 10, 12, 6, 12],
+      "14D": [0, 5, 6, 8, 10, 0, 12, 6, 7, 10, 8, 12, 6, 12],
+      "30D": [0, 4, 5, 6, 8, 0, 10, 6, 7, 8, 12, 6, 5, 10, 0, 6, 8, 12, 5, 7, 10, 6, 12, 8, 0, 5, 6, 8, 10, 12],
+    },
+    tips: ["Keep one quiet 10-minute block daily", "Use low light before you start", "Log how calm you feel after the session"],
+  },
 }
 
 function avg(values: number[]) {
@@ -108,11 +125,14 @@ export default function MetricDetails() {
   const [cameraError, setCameraError] = useState("")
   const [lowSignal, setLowSignal] = useState(false)
   const [signalQuality, setSignalQuality] = useState(0)
+  const [placementMessage, setPlacementMessage] = useState("Place your finger properly over the rear camera and flash.")
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const [historyOverride, setHistoryOverride] = useState<number[] | null>(null)
   const [latestOverride, setLatestOverride] = useState<number | null>(null)
   const [bpLatest, setBpLatest] = useState<{ sys: number | null; dia: number | null; eventAt?: string } | null>(null)
-  const [bpHistory, setBpHistory] = useState<number[] | null>(null)
+  const [bpHistory, setBpHistory] = useState<BloodPressurePoint[] | null>(null)
+  const [meditationHistory, setMeditationHistory] = useState<number[] | null>(null)
+  const [meditationLatest, setMeditationLatest] = useState<number | null>(null)
   const [saveTimeoutReached, setSaveTimeoutReached] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -124,7 +144,9 @@ export default function MetricDetails() {
   const retryTimerRef = useRef<number | null>(null)
   const history = metric.windows[windowKey]
   const dynamicHistory = metricId === "blood-pressure"
-    ? bpHistory ?? history
+    ? bpHistory?.map((point) => point.sys) ?? history
+    : metricId === "meditation"
+      ? meditationHistory ?? history
     : historyOverride ?? history
 
   const max = Math.max(...dynamicHistory)
@@ -155,12 +177,49 @@ export default function MetricDetails() {
   const hrTips = displayCurrentNumber > 100
     ? ["Short recovery walk", "Hydrate + electrolytes", "Reduce caffeine today"]
     : ["Hydrate before noon", "Sleep at fixed timing", "Limit caffeine after 4 PM"]
+  const heartPlacementState = useMemo<"waiting" | "good" | "adjust">(() => {
+    if (measureStage === "guide" || measureStage === "idle" || measureStage === "done") return "waiting"
+    if (signalQuality >= 0.35 && !lowSignal) return "good"
+    return "adjust"
+  }, [lowSignal, measureStage, signalQuality])
+  const summaryStats = [
+    { label: "Average", icon: <FiActivity />, value: `${average.toFixed(1)} ${metric.unit}` },
+    { label: "Lowest", icon: <FiArrowDownRight />, value: `${min.toFixed(1)} ${metric.unit}` },
+    { label: "Highest", icon: <FiArrowUpRight />, value: `${max.toFixed(1)} ${metric.unit}` },
+    { label: `${windowKey} Trend`, icon: <FiTrendingUp />, value: `${trendText} ${metric.unit}`, accent: "trend" as const },
+  ]
+  const chartLabelStep = dynamicHistory.length <= 7 ? 1 : dynamicHistory.length <= 14 ? 2 : 5
 
   const displayValue =
     metricId === "blood-pressure" && bpLatest?.sys && bpLatest?.dia
       ? `${Math.round(bpLatest.sys)}/${Math.round(bpLatest.dia)}`
-      : String(displayCurrentNumber)
+      : metricId === "meditation"
+        ? String(meditationLatest ?? displayCurrentNumber)
+        : String(displayCurrentNumber)
   const displayUnit = metricId === "blood-pressure" ? "mmHg" : metric.unit
+  const bpDiastolicHistory = bpHistory?.map((point) => point.dia) ?? []
+  const bpCombinedLatest = bpLatest?.sys && bpLatest?.dia ? `${Math.round(bpLatest.sys)}/${Math.round(bpLatest.dia)}` : displayValue
+  const bpLineWidth = 320
+  const bpLineHeight = 188
+  const bpDates = dynamicHistory.map((_, index) => `May ${12 + index}`)
+  const toBpY = (value: number) => {
+    const normalized = (value - 60) / 80
+    return bpLineHeight - normalized * bpLineHeight
+  }
+  const bpSysPoints = dynamicHistory.map((value, index) => {
+    const x = dynamicHistory.length > 1 ? (index / (dynamicHistory.length - 1)) * bpLineWidth : bpLineWidth / 2
+    return `${x},${toBpY(value)}`
+  }).join(" ")
+  const bpDiaPoints = bpDiastolicHistory.map((value, index) => {
+    const x = bpDiastolicHistory.length > 1 ? (index / (bpDiastolicHistory.length - 1)) * bpLineWidth : bpLineWidth / 2
+    return `${x},${toBpY(value)}`
+  }).join(" ")
+  const bpStatus = useMemo(() => {
+    if (!bpLatest?.sys || !bpLatest?.dia) return { label: "Track", copy: "Add your reading to start live trend", tone: "neutral" as const }
+    if (bpLatest.sys <= 120 && bpLatest.dia <= 80) return { label: "Normal", copy: "Normal blood pressure reading", tone: "good" as const }
+    if (bpLatest.sys >= 140 || bpLatest.dia >= 90) return { label: "Elevated", copy: "Reading needs quick follow-up", tone: "high" as const }
+    return { label: "Watch", copy: "Keep monitoring this week", tone: "mid" as const }
+  }, [bpLatest?.dia, bpLatest?.sys])
 
   const [mealEntries, setMealEntries] = useState<MealEntry[]>(() => {
     if (metricId !== "calories") return []
@@ -233,9 +292,34 @@ export default function MetricDetails() {
       image: mealDraft.image || undefined,
       loggedAt: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }),
     }
+    const nextTotal = mealEntries.reduce((sum, item) => sum + item.calories, 0) + calories
     setMealEntries((prev) => [entry, ...prev])
     setMealDraft({ type: mealDraft.type, name: "", calories: "", notes: "", image: "" })
+
+    // Persist a daily total so trend charts can use backend data (deduped by date on read).
+    void saveVitalReading({ metric: "calories", value: nextTotal, unit: "kcal", source: "manual" }).catch(() => undefined)
   }
+
+  useEffect(() => {
+    if (metricId !== "meditation") return
+    let active = true
+    void getStressHistory("meditation", windowKey === "7D" ? 7 : windowKey === "14D" ? 14 : 30)
+      .then((response) => {
+        if (!active) return
+        const durations = [...(response.entries ?? [])]
+          .reverse()
+          .map((entry) => Number(entry.durationMinutes) || 0)
+          .filter((value) => value >= 0)
+        if (durations.length > 0) {
+          setMeditationHistory(durations)
+          setMeditationLatest(durations[durations.length - 1] ?? null)
+        }
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [metricId, windowKey])
 
   useEffect(() => {
     if (measureStage !== "prepare") return
@@ -332,11 +416,17 @@ export default function MetricDetails() {
           ctx.drawImage(video, 0, 0, size, size)
           const image = ctx.getImageData(22, 22, 20, 20).data
           let gSum = 0
+          let rSum = 0
+          let bSum = 0
           const count = image.length / 4
           for (let i = 0; i < image.length; i += 4) {
+            rSum += image[i]
             gSum += image[i + 1]
+            bSum += image[i + 2]
           }
+          const avgR = rSum / count
           const avgG = gSum / count
+          const avgB = bSum / count
           samplesRef.current.push({ t: now, v: avgG })
           const windowMs = 10000
           samplesRef.current = samplesRef.current.filter((s) => now - s.t <= windowMs)
@@ -347,6 +437,17 @@ export default function MetricDetails() {
           const variance = detrended.reduce((sum, v) => sum + Math.pow(v, 2), 0) / (detrended.length || 1)
           const std = Math.sqrt(variance)
           const quality = Math.min(1, std / 5)
+          const brightness = (avgR + avgG + avgB) / 3
+          const redDominance = avgR - ((avgG + avgB) / 2)
+          if (brightness < 16) {
+            setPlacementMessage("Too dark right now. Cover the camera and flash gently, then hold still.")
+          } else if (redDominance < 6) {
+            setPlacementMessage("Place your index finger directly on the rear camera until the view turns warm red.")
+          } else if (quality >= 0.35) {
+            setPlacementMessage("Finger placement looks good. Hold steady.")
+          } else {
+            setPlacementMessage("Almost there. Keep your finger flat and cover the camera fully.")
+          }
           setSignalQuality(quality)
           setLowSignal(quality < 0.2)
           const threshold = std * 0.4
@@ -397,6 +498,7 @@ export default function MetricDetails() {
     setCameraError("")
     setLowSignal(false)
     setSignalQuality(0)
+    setPlacementMessage("Place your finger properly over the rear camera and flash.")
     setSaveStatus("idle")
     setMeasureStage("guide")
   }
@@ -492,14 +594,21 @@ export default function MetricDetails() {
           dia: typeof dia?.value === "number" ? dia.value : null,
           eventAt: sys?.eventAt || dia?.eventAt,
         })
-        const historyResp = await getVitalHistory("blood_pressure_sys", 30)
+        const [sysHistoryResp, diaHistoryResp] = await Promise.all([
+          getVitalHistory("blood_pressure_sys", 30),
+          getVitalHistory("blood_pressure_dia", 30),
+        ])
         if (!active) return
-        if (historyResp?.points?.length) {
-          const values = historyResp.points
-            .slice()
-            .reverse()
-            .map((point) => point.value)
-          setBpHistory(values)
+        const sysPoints = sysHistoryResp?.points?.slice().reverse() ?? []
+        const diaPoints = diaHistoryResp?.points?.slice().reverse() ?? []
+        const length = Math.min(sysPoints.length, diaPoints.length)
+        if (length > 0) {
+          const nextHistory = Array.from({ length }).map((_, index) => ({
+            sys: sysPoints[index]?.value ?? 0,
+            dia: diaPoints[index]?.value ?? 0,
+            eventAt: sysPoints[index]?.eventAt || diaPoints[index]?.eventAt || new Date().toISOString(),
+          }))
+          setBpHistory(nextHistory)
         }
       } catch {
         // keep fallback data
@@ -510,32 +619,135 @@ export default function MetricDetails() {
     }
   }, [metricId])
 
+  useEffect(() => {
+    if (metricId !== "calories") return
+    let active = true
+    const load = async () => {
+      try {
+        const historyResp = await getVitalHistory("calories", 120)
+        if (!active) return
+        const points = historyResp?.points ?? []
+        const dailyLatest = new Map<string, number>()
+        for (const point of points) {
+          const dateKey = (point.eventAt || "").slice(0, 10)
+          if (!dateKey) continue
+          if (!dailyLatest.has(dateKey)) {
+            dailyLatest.set(dateKey, Number(point.value) || 0)
+          }
+        }
+
+        const days = windowKey === "7D" ? 7 : windowKey === "14D" ? 14 : 30
+        const series: number[] = []
+        let carry: number | null = null
+        for (let i = days - 1; i >= 0; i -= 1) {
+          const d = new Date()
+          d.setDate(d.getDate() - i)
+          const key = d.toISOString().slice(0, 10)
+          const value = dailyLatest.has(key) ? (dailyLatest.get(key) as number) : null
+          if (typeof value === "number") {
+            carry = value
+            series.push(value)
+          } else if (typeof carry === "number") {
+            series.push(carry)
+          } else {
+            series.push(0)
+          }
+        }
+
+        // If backend has no data, fall back to local meal storage for a few days.
+        if (series.every((v) => v === 0)) {
+          const fallback: number[] = []
+          let fallbackCarry: number | null = null
+          for (let i = days - 1; i >= 0; i -= 1) {
+            const d = new Date()
+            d.setDate(d.getDate() - i)
+            const key = d.toISOString().slice(0, 10)
+            const mealKey = `calorie_meals_${key}`
+            try {
+              const raw = localStorage.getItem(mealKey)
+              if (raw) {
+                const parsed = JSON.parse(raw) as Array<{ calories?: number }>
+                const total = parsed.reduce((sum, row) => sum + (Number(row.calories) || 0), 0)
+                fallbackCarry = total
+                fallback.push(total)
+                continue
+              }
+            } catch {
+              // ignore parse issues
+            }
+            if (typeof fallbackCarry === "number") {
+              fallback.push(fallbackCarry)
+            } else {
+              fallback.push(0)
+            }
+          }
+          setHistoryOverride(fallback)
+          setLatestOverride(fallback[fallback.length - 1] ?? null)
+          return
+        }
+
+        setHistoryOverride(series)
+        setLatestOverride(series[series.length - 1] ?? null)
+      } catch {
+        // keep fallback data
+      }
+    }
+    void load()
+    return () => {
+      active = false
+    }
+  }, [metricId, windowKey])
+
   return (
     <main className="metric-detail-page app-page-enter">
       <header className="metric-detail-header app-fade-stagger">
         <button className="metric-back app-pressable" type="button" onClick={() => navigate(-1)} aria-label="Back">
           <FiArrowLeft />
         </button>
-        <h1>{metric.title} Analysis</h1>
+        <h1>{metricId === "heart-rate" ? "Daily Heartbeat Tracker" : `${metric.title} Analysis`}</h1>
       </header>
 
       <section className="metric-detail-shell app-content-slide">
-        <article className={`metric-hero ${metric.tone} app-fade-stagger`}>
-          <span className="hero-icon">{metric.icon}</span>
-          <div>
-            <h2>{displayValue} <small>{displayUnit}</small></h2>
-            <p>{metricId === "heart-rate" ? hrSubtitle : metric.subtitle}</p>
-          </div>
-        </article>
+        {metricId === "blood-pressure" ? (
+          <article className="bp-analysis-hero app-fade-stagger">
+            <div className="bp-analysis-hero-icon">
+              <span className="bp-analysis-heart">{metric.icon}</span>
+              <span className="bp-analysis-live-dot" />
+            </div>
+            <div className="bp-analysis-hero-copy">
+              <span className={`bp-analysis-status ${bpStatus.tone}`}>
+                <FiCheckCircle />
+                {bpStatus.label}
+              </span>
+              <h2>{bpCombinedLatest} <small>mmHg</small></h2>
+              <p>{bpStatus.copy}</p>
+              <div className="bp-analysis-meta">
+                <span><FiCalendar /> {bpLatest?.eventAt ? new Date(bpLatest.eventAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "Today"}</span>
+                <span>•</span>
+                <span><FiCamera /> Manual Entry</span>
+              </div>
+            </div>
+          </article>
+        ) : (
+          <article className={`metric-hero ${metric.tone} app-fade-stagger`}>
+            <span className="hero-icon">{metric.icon}</span>
+            <div>
+              <h2>{displayValue} <small>{displayUnit}</small></h2>
+              <p>{metricId === "heart-rate" ? hrSubtitle : metric.subtitle}</p>
+            </div>
+          </article>
+        )}
 
         {metricId === "heart-rate" && !checkedToday && (
           <article className="metric-measure-card app-fade-stagger">
-            <div>
-              <h3>Check your heart rate</h3>
-              <p>Daily check-in helps build your trend and AI insight.</p>
+            <div className="metric-measure-copy">
+              <span className="measure-kicker">Daily camera scan</span>
+              <h3>Check your heartbeat in one guided tap</h3>
+              <p>Build your daily trend, spot small changes faster, and save a cleaner AI-led reading log.</p>
             </div>
             <button className="measure-btn app-pressable" type="button" onClick={startMeasurement}>
-              Start Checking Heart Rate
+              <FiPlayCircle />
+              <span>Start Checking Heart Rate</span>
             </button>
           </article>
         )}
@@ -550,11 +762,17 @@ export default function MetricDetails() {
         )}
 
         {(metricId === "blood-pressure" || metricId === "sugar") && (
-          <article className="metric-measure-card app-fade-stagger">
-            <div>
-              <h3>Daily tracking</h3>
-              <p>Log your reading on the tracking page to keep the analysis accurate.</p>
-            </div>
+          <article className={`metric-measure-card app-fade-stagger ${metricId === "blood-pressure" ? "metric-measure-card--bp" : ""}`}>
+            {metricId === "blood-pressure" ? (
+              <div className="bp-track-cta bp-track-cta--image">
+                <img src="/assets/reference-ui/bp-track-card.webp" alt="Daily tracking card" className="bp-track-card-image" />
+              </div>
+            ) : (
+              <div>
+                <h3>Daily tracking</h3>
+                <p>Log your reading on the tracking page to keep the analysis accurate.</p>
+              </div>
+            )}
             <button
               className="measure-btn app-pressable"
               type="button"
@@ -582,22 +800,13 @@ export default function MetricDetails() {
         </article>
 
         <article className="metric-summary-grid app-fade-stagger">
-          <section className="summary-item">
-            <span>Average</span>
-            <strong>{average.toFixed(1)} {metric.unit}</strong>
-          </section>
-          <section className="summary-item">
-            <span>Lowest</span>
-            <strong>{min.toFixed(1)} {metric.unit}</strong>
-          </section>
-          <section className="summary-item">
-            <span>Highest</span>
-            <strong>{max.toFixed(1)} {metric.unit}</strong>
-          </section>
-          <section className="summary-item trend">
-            <span>Trend</span>
-            <strong>{trendText} {metric.unit}</strong>
-          </section>
+          {summaryStats.map((item) => (
+            <section key={item.label} className={`summary-item ${item.accent ?? ""}`}>
+              <span className="summary-icon">{item.icon}</span>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </section>
+          ))}
         </article>
 
         {metricId === "calories" && (
@@ -696,25 +905,85 @@ export default function MetricDetails() {
           </article>
         )}
 
-        <article className="metric-chart-card app-fade-stagger">
-          <h3>Trend ({windowKey})</h3>
-          <div className="metric-chart">
-            {dynamicHistory.map((value, index) => {
-              const height = 26 + ((value - min) / range) * 70
-              return (
-                <div className="bar-wrap" key={`${metric.title}-${windowKey}-${index}`}>
-                  <span
-                    className={`bar ${metric.tone}`}
-                    style={{ height: `${height}%`, animationDelay: `${index * 70}ms` }}
-                  />
-                  <small>{index + 1}</small>
-                </div>
-              )
-            })}
-          </div>
-        </article>
+        {metricId === "blood-pressure" ? (
+          <article className="metric-chart-card metric-chart-card--bp app-fade-stagger">
+            <div className="bp-chart-head">
+              <h3>{windowKey} Trend</h3>
+              <span className="bp-chart-filter">Systolic / Diastolic</span>
+            </div>
+            <div className="bp-line-chart">
+              <div className="bp-line-grid">
+                <svg viewBox={`0 0 ${bpLineWidth + 54} ${bpLineHeight + 40}`} className="bp-line-svg" aria-hidden="true">
+                  {[140, 120, 100, 80, 60].map((tick) => {
+                    const y = toBpY(tick)
+                    return (
+                      <g key={tick}>
+                        <text x="0" y={y + 4} className="bp-axis-label">{tick}</text>
+                        <line x1="34" y1={y} x2={bpLineWidth + 34} y2={y} className="bp-grid-line" />
+                      </g>
+                    )
+                  })}
 
-        <article className="metric-insight-card app-fade-stagger">
+                  <polyline points={bpSysPoints} transform="translate(34 0)" className="bp-polyline sys" />
+                  <polyline points={bpDiaPoints} transform="translate(34 0)" className="bp-polyline dia" />
+
+                  {dynamicHistory.map((value, index) => {
+                    const x = dynamicHistory.length > 1 ? (index / (dynamicHistory.length - 1)) * bpLineWidth + 34 : bpLineWidth / 2 + 34
+                    const sysY = toBpY(value)
+                    const diaY = toBpY(bpDiastolicHistory[index] ?? 0)
+                    const isLast = index === dynamicHistory.length - 1
+                    return (
+                      <g key={`${windowKey}-${index}`}>
+                        <circle cx={x} cy={sysY} r="5.5" className="bp-dot sys" />
+                        <circle cx={x} cy={diaY} r="5.5" className="bp-dot dia" />
+                        {isLast ? (
+                          <>
+                            <rect x={x + 12} y={sysY - 17} rx="10" ry="10" width="44" height="30" className="bp-tag-box sys" />
+                            <text x={x + 34} y={sysY + 3} textAnchor="middle" className="bp-tag-text">{Math.round(value)}</text>
+                            <rect x={x + 12} y={diaY - 17} rx="10" ry="10" width="44" height="30" className="bp-tag-box dia" />
+                            <text x={x + 34} y={diaY + 3} textAnchor="middle" className="bp-tag-text">{Math.round(bpDiastolicHistory[index] ?? 0)}</text>
+                          </>
+                        ) : null}
+                        {(index % chartLabelStep === 0 || isLast) ? (
+                          <text x={x} y={bpLineHeight + 26} textAnchor="middle" className="bp-date-label">{bpDates[index]}</text>
+                        ) : null}
+                      </g>
+                    )
+                  })}
+                </svg>
+              </div>
+            </div>
+            <div className="bp-chart-legend">
+              <span><i className="sys" /> Systolic (mmHg)</span>
+              <span><i className="dia" /> Diastolic (mmHg)</span>
+            </div>
+          </article>
+        ) : (
+          <article className="metric-chart-card app-fade-stagger">
+            <h3>{windowKey} Trend</h3>
+            <div className="metric-chart-scroll">
+              <div
+                className="metric-chart"
+                style={{ gridTemplateColumns: `repeat(${dynamicHistory.length}, minmax(22px, 1fr))` }}
+              >
+                {dynamicHistory.map((value, index) => {
+                  const heightPx = Math.round(28 + ((value - min) / range) * 100)
+                  return (
+                    <div className="bar-wrap" key={`${metric.title}-${windowKey}-${index}`}>
+                      <span
+                        className={`bar ${metric.tone}`}
+                        style={{ height: `${heightPx}px`, animationDelay: `${index * 70}ms` }}
+                      />
+                      <small>{index % chartLabelStep === 0 || index === dynamicHistory.length - 1 ? index + 1 : ""}</small>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </article>
+        )}
+
+        <article className={`metric-insight-card app-fade-stagger ${metricId === "blood-pressure" ? "metric-insight-card--bp" : ""}`}>
           <h3>Clinical insight</h3>
           <p>{metricId === "heart-rate" ? hrInsight : metric.insight}</p>
           <ul>
@@ -723,6 +992,12 @@ export default function MetricDetails() {
             ))}
             <li>Book consultation if unusual trend persists for 3+ days</li>
           </ul>
+          {metricId === "blood-pressure" ? (
+            <div className="bp-privacy-note">
+              <FiShield />
+              Your data is private and secure.
+            </div>
+          ) : null}
         </article>
       </section>
 
@@ -740,6 +1015,14 @@ export default function MetricDetails() {
       {metricId === "heart-rate" && measureStage !== "idle" && (
         <div className="hr-measure-overlay">
           <section className="hr-measure-card">
+            <button
+              className="measure-dismiss app-pressable"
+              type="button"
+              onClick={() => setMeasureStage("idle")}
+              aria-label="Close measurement popup"
+            >
+              <FiX />
+            </button>
             <header className="hr-measure-head">
               <h2>Measure</h2>
               <p>
@@ -754,17 +1037,25 @@ export default function MetricDetails() {
             {measureStage === "guide" && (
               <div className="hr-guide">
                 <div className="hr-guide-illustration" aria-hidden="true">
-                  <span className="hr-phone" />
+                  <span className="hr-pulse-ring hr-pulse-ring-a" />
+                  <span className="hr-pulse-ring hr-pulse-ring-b" />
+                  <span className="hr-phone">
+                    <span className="hr-screen-glow" />
+                    <span className="hr-camera-dot" />
+                  </span>
                   <span className="hr-hand" />
-                  <span className="hr-camera-dot" />
+                  <span className="hr-finger-tip" />
+                  <span className="hr-placement-chip">Rear camera</span>
+                  <span className="hr-placement-wave" />
                 </div>
-                <ol>
+                <ol className="hr-guide-list">
                   <li>Place your index finger gently on the rear camera.</li>
                   <li>Cover the light fully, hold steady for 25 seconds.</li>
                   <li>Stay seated and breathe normally.</li>
                 </ol>
-                <button className="measure-close measure-close--primary app-pressable" type="button" onClick={() => setMeasureStage("prepare")}>
-                  Start measurement
+                <button className="measure-close measure-close--primary measure-close--cta app-pressable" type="button" onClick={() => setMeasureStage("prepare")}>
+                  <FiCamera />
+                  <span>Start measurement</span>
                 </button>
               </div>
             )}
@@ -800,6 +1091,13 @@ export default function MetricDetails() {
                 <span className="hr-progress-text">
                   {measureStage === "done" ? "Completed" : `Measuring... (${measureProgress}%)`}
                 </span>
+                {measureStage !== "done" && (
+                  <span className={`hr-placement-status ${heartPlacementState}`}>
+                    {heartPlacementState === "good"
+                      ? "Finger placement looks good. Hold steady."
+                      : placementMessage}
+                  </span>
+                )}
                 {lowSignal && measureStage !== "done" && (
                   <span className="hr-signal-warning">Low signal. Cover camera and light fully.</span>
                 )}

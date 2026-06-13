@@ -120,6 +120,17 @@
   font-size: 0.9rem;
 }
 
+.meditation-sound-btn {
+  border: 0;
+  border-radius: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  margin: 0 0 12px;
+  background: linear-gradient(135deg, #6d28d9, #a855f7);
+  color: #fff;
+  font-weight: 700;
+}
+
 .meditation-instructions ul {
   margin: 0;
   padding-left: 18px;

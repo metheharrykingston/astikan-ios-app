@@ -5,6 +5,7 @@ import { ensureEmployeeActor } from "../../services/actorsApi"
 import { createAppointment } from "../../services/appointmentsApi"
 import { getEmployeeCompanySession } from "../../services/authApi"
 import { fetchDoctorProfile, type DoctorAvailabilitySlot } from "../../services/doctorsApi"
+import { fetchPaymentQuote, initiatePayment, openCashfreeCheckout, verifyPayment, type PaymentQuote } from "../../services/paymentsApi"
 import { addNotification } from "../../services/notificationCenter"
 import { createTeleconsultSession } from "../../services/teleconsultApi"
 import { goBackOrFallback } from "../../utils/navigation"
@@ -180,9 +181,13 @@ export default function TeleSchedule() {
   const [selectedSlot, setSelectedSlot] = useState("")
   const [availability, setAvailability] = useState<DoctorAvailabilitySlot[]>([])
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<"CASHFREE" | "COD">("CASHFREE")
+  const [quote, setQuote] = useState<PaymentQuote | null>(null)
+  const [paymentError, setPaymentError] = useState("")
 
   const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate])
   const monthYear = useMemo(() => formatMonthYear(selectedDate), [selectedDate])
+  const consultationAmount = mode === "opd" ? 699 : 499
 
   useEffect(() => {
     let active = true
@@ -205,6 +210,10 @@ export default function TeleSchedule() {
       active = false
     }
   }, [doctor?.id])
+
+  useEffect(() => {
+    void fetchPaymentQuote(mode === "opd" ? "opd" : "teleconsult", consultationAmount).then(setQuote).catch(() => undefined)
+  }, [mode, consultationAmount])
 
   const availableSlots = useMemo(() => {
     const today = startOfDay(new Date()).getTime()
@@ -239,6 +248,8 @@ export default function TeleSchedule() {
 
   async function bookAppointment() {
     if (!selectedSlot) return
+    setPaymentError("")
+    const serviceType = mode === "opd" ? "opd" : "teleconsult"
 
     if (mode === "opd") {
       navigate("/teleconsultation/pickup", {
@@ -259,6 +270,21 @@ export default function TeleSchedule() {
     let booking: TeleBooking | null = null
     try {
       const actors = await ensureTeleconsultActors(doctor)
+      const payment = await initiatePayment({
+        serviceType,
+        amountInr: consultationAmount,
+        paymentMethod,
+        metadata: {
+          employeeName: "Astikan Employee",
+          employeeEmail: actors.employee.email,
+          employeePhone: actors.employee.phone ?? "9999999999",
+          doctorName: doctor.name,
+          specialty: doctor.specialty,
+        },
+      })
+      if (paymentMethod === "CASHFREE" && payment.paymentSessionId) {
+        await openCashfreeCheckout(payment.paymentSessionId, payment.cashfreeOrderId)
+      }
       const end = new Date(scheduled.getTime() + 30 * 60 * 1000)
       const appointment = await createAppointment({
         companyId: actors.employee.companyId,
@@ -276,6 +302,7 @@ export default function TeleSchedule() {
         patientSummary: "Scheduled consultation",
         symptomSnapshot: { scheduled: true },
       })
+      await verifyPayment(payment.transactionId, payment.cashfreeOrderId ?? null, appointment.appointmentId)
       const created = await createTeleconsultSession({
         companyId: actors.employee.companyId,
         employeeId: actors.employee.employeeUserId,
@@ -308,14 +335,20 @@ export default function TeleSchedule() {
         doctorId: booking.doctorId,
         scheduledAt: booking.scheduledAt,
       })
-    } catch {
-      // Keep UI responsive if backend is unavailable.
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We could not create your booking right now."
+      if (message.toLowerCase().includes("payment not completed")) {
+        setPaymentError("Payment was not completed, so the consultation was not booked.")
+        return
+      }
+      setPaymentError(message)
+      return
     }
 
     if (booking) {
       navigate("/teleconsultation/confirm", { state: { booking } })
     } else {
-      navigate("/bookings")
+      setPaymentError("Booking did not complete. Please try again.")
     }
   }
 
@@ -327,7 +360,6 @@ export default function TeleSchedule() {
         </button>
         <div>
           <h1>Schedule Appointment</h1>
-          <p>{mode === "opd" ? "OPD Visit" : "Teleconsultation"} booking</p>
         </div>
       </header>
 
@@ -343,6 +375,25 @@ export default function TeleSchedule() {
             <img src={doctor.avatar} alt={doctor.name} loading="lazy" />
           </article>
         </section>
+
+        {quote && (
+          <section className="tele-calendar-card app-fade-stagger">
+            <section className="tele-calendar-head">
+              <h3>Payment</h3>
+            </section>
+            <div className="tele-payment-grid">
+              <div className="tele-payment-line"><span>Consultation fee</span><strong>₹{quote.grossAmountInr.toFixed(2)}</strong></div>
+              <div className="tele-payment-line"><span>Astikan wallet benefit ({quote.discountPercent}% today)</span><strong>-₹{quote.walletUsableInr.toFixed(2)}</strong></div>
+              {quote.cashbackMessage ? <div className="tele-payment-line"><span>Benefit note</span><strong>{quote.cashbackMessage}</strong></div> : null}
+              <div className="tele-payment-line total"><span>Pay now</span><strong>₹{quote.payableAmountInr.toFixed(2)}</strong></div>
+              <div className="payment-pill-row">
+                <button type="button" disabled={quote.cashfreeEnabled === false} className={`payment-pill ${paymentMethod === "CASHFREE" ? "active" : ""}`} onClick={() => setPaymentMethod("CASHFREE")}>Pay Online</button>
+                <button type="button" disabled={quote.codEnabled === false} className={`payment-pill ${paymentMethod === "COD" ? "active" : ""}`} onClick={() => setPaymentMethod("COD")}>Pay at Desk</button>
+              </div>
+              {paymentError ? <div className="tele-payment-error">{paymentError}</div> : null}
+            </div>
+          </section>
+        )}
 
         <section className="tele-calendar-card app-fade-stagger">
           <section className="tele-calendar-head">

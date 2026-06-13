@@ -1,47 +1,52 @@
-# Astikan Employee App
+# Astikan mobile permissions patch
 
-Employee-facing React app for teleconsultation, OPD, lab tests, pharmacy, wellness, metrics, and notifications.
+This patch updates the Astikan user app Android permissions for:
 
-## Local
+- Current location address auto-fill
+- Emergency SOS dialer/calling readiness
+- Camera/prescription capture
+- Voice/microphone features
+- Push notifications
+- Gallery/image access
+
+## Files included
+
+- `android/app/src/main/AndroidManifest.xml`
+- `ios-permissions/Info.plist.permission-snippet.xml`
+- `ios-permissions/README.md`
+- `ANDROID_IOS_PERMISSIONS_AUDIT.md`
+- `scripts/build-android-debug-apk.sh`
+- `scripts/build-android-release-apk.sh`
+
+## Apply patch
+
+Copy these files into the Astikan user app root, replacing the existing AndroidManifest.
+
+## Build Android APK
+
+From the user app root:
 
 ```bash
-npm install
-npm run dev
+chmod +x scripts/build-android-debug-apk.sh
+bash scripts/build-android-debug-apk.sh
 ```
 
-Default dev URL:
-- `http://localhost:5174`
+Expected output:
 
-API mode:
-- local: `/api`
-- production: `/api` proxied by nginx to the backend
+```txt
+android/app/build/outputs/apk/debug/app-debug.apk
+```
 
-## Production
+## iOS
 
-Live URL:
-- `https://employee.astikan.tech`
+This project snapshot did not include a full Capacitor `ios/` folder. On macOS, after creating the iOS project, copy the keys from:
 
-Backend integration:
-- `/api/*`
-- `/ws/teleconsult`
+```txt
+ios-permissions/Info.plist.permission-snippet.xml
+```
 
-## Teleconsultation
+into:
 
-The employee app:
-- creates teleconsult appointments
-- creates teleconsult sessions
-- joins the shared native WebRTC room
-
-The live call depends on:
-- backend signaling at `/ws/teleconsult`
-- ICE config returned by backend teleconsult APIs
-- VPS TURN server configured in backend env
-
-## Deploy
-
-Published on the VPS under:
-- `/srv/astikan/apps/employee/current`
-
-Auto deploy:
-- `astikan-deploy.timer`
-
+```txt
+ios/App/App/Info.plist
+```

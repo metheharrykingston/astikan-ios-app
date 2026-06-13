@@ -1,0 +1,46 @@
+.ast-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+  transform: translateX(-50%);
+  z-index: 90;
+  width: min(calc(100% - 24px), calc(var(--app-frame-width, 430px) - 24px));
+  min-height: 64px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  border: 1px solid rgba(202, 211, 226, 0.9);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(18px);
+}
+.ast-bottom-nav__item {
+  position: relative;
+  border: 0;
+  border-radius: 16px;
+  min-height: 50px;
+  padding: 5px 2px;
+  background: transparent;
+  color: #64748b;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.ast-bottom-nav__item.active { color: #0b66f6; background: linear-gradient(180deg, #edf6ff, #eef4ff); box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.16); }
+.ast-bottom-nav__icon { position: relative; display: grid; place-items: center; min-height: 25px; }
+.ast-bottom-nav__icon svg { width: 19px; height: 19px; }
+.ast-bottom-nav__icon em {
+  position: absolute; top: -11px; right: -20px; min-width: 34px; height: 18px; padding: 0 6px;
+  border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+  font-style: normal; font-size: 0.62rem; font-weight: 1000; color: #fff;
+  background: linear-gradient(135deg, #ff6a00, #ff2d55, #7c3aed);
+  box-shadow: 0 7px 16px rgba(255, 45, 85, 0.34); animation: ast-offer-shine 1.45s ease-in-out infinite;
+}
+@keyframes ast-offer-shine { 0%,100%{transform:translateY(0) scale(1);filter:brightness(1)} 50%{transform:translateY(-1px) scale(1.06);filter:brightness(1.18)} }
+@media (max-width: 360px) { .ast-bottom-nav { width:min(calc(100% - 14px), calc(var(--app-frame-width, 430px) - 14px)); padding:6px; gap:3px; } .ast-bottom-nav__item { font-size:.58rem; border-radius:14px; } .ast-bottom-nav__icon em { right:-17px; min-width:30px; font-size:.56rem; } }

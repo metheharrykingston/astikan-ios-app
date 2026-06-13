@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom"
 import { useEffect, useRef, useState } from "react"
 import "./route-transition.css"
+import { VoiceAgentProvider } from "./voice-agent"
 
 export default function RouteTransitionLayout() {
   const location = useLocation()
@@ -23,13 +24,13 @@ export default function RouteTransitionLayout() {
   }, [location.pathname])
 
   return (
-    <>
+    <VoiceAgentProvider>
       <Outlet />
       {showLoader && (
         <div className="route-loader-overlay" aria-live="polite" aria-label="Loading next screen">
           <span className="route-loader-spinner" />
         </div>
       )}
-    </>
+    </VoiceAgentProvider>
   )
 }

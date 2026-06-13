@@ -9,44 +9,17 @@ export default function Terms() {
       <article className="legal-card app-fade-stagger">
         <h1>Terms of Service</h1>
         <div className="legal-scroll">
-          <p>
-            Astikan provides employee wellness, teleconsultation access, lab booking, pharmacy services, and health programs for
-            your organization. By using the app, you agree to use it responsibly and in line with your company’s policies.
-          </p>
-          <p>
-            <strong>Medical guidance</strong> is for support and convenience only. The app does not replace in-person medical
-            care. If you believe you are in an emergency or at immediate risk, seek help from local emergency services and
-            licensed clinicians right away.
-          </p>
-          <p>
-            <strong>Account access</strong> is tied to your organization. Keep your login credentials private and notify your
-            admin if you suspect unauthorized access. You are responsible for activity performed using your account.
-          </p>
-          <p>
-            <strong>Appointments and services</strong> are subject to availability and verification. Teleconsultation access,
-            lab bookings, and pharmacy deliveries may be rescheduled or adjusted if required for safety, compliance, or
-            operational reasons.
-          </p>
-          <p>
-            <strong>Prescriptions and orders</strong> must follow applicable regulations. Some medicines may require valid
-            prescriptions. We may request additional verification before fulfilling sensitive orders.
-          </p>
-          <p>
-            <strong>Content and recommendations</strong> may include AI-assisted suggestions. These are informational and must
-            be confirmed with a qualified healthcare professional before making medical decisions.
-          </p>
-          <p>
-            <strong>Acceptable use</strong> includes honest use of services, respectful behavior toward healthcare staff, and
-            no misuse of systems. Abuse, fraud, or harassment can lead to account suspension.
-          </p>
-          <p>
-            <strong>Changes</strong> to these terms may occur as services evolve. Continued use of the app indicates acceptance
-            of the latest terms.
-          </p>
+          <p><strong>Astikan role:</strong> Astikan operates a healthcare services platform for booking consultations, hospital slots, lab tests, medicine orders, support services and medical finance referrals. Some services are fulfilled by Astikan operations and some are delivered by qualified doctors, hospitals, laboratories, medicine brands/vendors, logistics partners, payment partners or lending partners.</p>
+          <p><strong>Medical guidance:</strong> App content, AI suggestions and symptom tools are informational support only. They do not replace diagnosis, treatment or emergency care from a registered medical practitioner. In an emergency, contact local emergency services immediately.</p>
+          <p><strong>Teleconsultation:</strong> Teleconsultation and video consultation are subject to doctor availability, user eligibility, network quality and clinical discretion. A doctor may ask the user to visit a physical facility when remote consultation is not appropriate.</p>
+          <p><strong>Medicines:</strong> Astikan manages medicine orders, stock visibility, packaging, shipping and delivery status through its operations. Medicine brands/vendors are partners. Prescription-only medicines may require a valid prescription and may be rejected if documents are missing, invalid or non-compliant.</p>
+          <p><strong>Lab tests:</strong> Astikan manages lab booking, collection coordination, report flow and support. Sample collection timing, report turnaround and availability may vary by city, test type and operational conditions.</p>
+          <p><strong>Medical finance:</strong> Astikan is not a lender, loan broker guaranteeing approval, credit bureau or financial institution. Astikan forwards medical finance information for requests between ₹10,000 and ₹10,00,000 to lending partners only after user consent. Astikan does not verify PAN, approve loans, set final lending terms or disburse funds. PAN is checked only for format validation before submission.</p>
+          <p><strong>Payments, cancellation and refunds:</strong> Payments and refunds depend on service type, booking stage, partner confirmation, dispatch/sample/consultation status and payment gateway timelines.</p>
+          <p><strong>User responsibility:</strong> You must provide accurate information, use your own documents, keep login details secure and avoid fraudulent bookings, abusive behavior or misuse of services.</p>
+          <p><strong>Changes:</strong> Astikan may update services, pricing, partners, policies and these terms. Continued use means you accept the latest version shown in the app.</p>
         </div>
-        <button className="legal-back app-pressable" onClick={() => navigate(-1)}>
-          Back
-        </button>
+        <button className="legal-back app-pressable" onClick={() => navigate(-1)}>Back</button>
       </article>
     </main>
   )

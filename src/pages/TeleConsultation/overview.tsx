@@ -14,6 +14,7 @@ type TeleBooking = {
   status?: string
   scheduledAt: string
   joinWindowStart: string
+  durationMinutes?: number
 }
 
 const TELE_BOOKINGS_KEY = "teleconsult_bookings"
@@ -80,9 +81,9 @@ export default function TeleOverview() {
 
   const sessionEndLabel = useMemo(() => {
     if (!scheduledMs) return null
-    const end = new Date(scheduledMs + 30 * 60 * 1000)
+    const end = new Date(scheduledMs + (Math.max(5, Number(booking?.durationMinutes ?? 30)) * 60 * 1000))
     return end.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })
-  }, [scheduledMs])
+  }, [booking?.durationMinutes, scheduledMs])
 
   if (!booking) {
     return (

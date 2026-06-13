@@ -11,12 +11,18 @@ export type CartItem = {
   inStock: boolean
   price: number
   qty: number
+  isCustom?: boolean
+  genericName?: string
+  useCase?: string
+  manufacturer?: string
+  sourceUrl?: string
 }
 
 type CartContextType = {
   items: CartItem[]
   totalItems: number
   addItem: (item: MedicineItem, qty?: number) => void
+  replaceCartWithItem: (item: MedicineItem, qty?: number) => void
   removeItem: (id: string) => void
   updateQty: (id: string, qty: number) => void
   syncItems: (updates: Array<Partial<CartItem> & { id: string }>) => void
@@ -71,19 +77,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
       persist(items.map((line) => (line.id === item.id ? { ...line, qty: line.qty + nextQty } : line)))
       return
     }
-    persist([
-      ...items,
-      {
-        id: item.id,
-        name: item.name,
-        dose: item.dose,
-        kind: item.kind,
-        image: item.image,
-        inStock: item.inStock,
-        price: estimateMedicinePrice(item),
-        qty: nextQty,
-      },
-    ])
+    persist([...items, toCartLine(item, nextQty)])
+  }
+
+  function toCartLine(item: MedicineItem, qty: number): CartItem {
+    return {
+      id: item.id,
+      name: item.name,
+      dose: item.dose,
+      kind: item.kind,
+      image: item.image,
+      inStock: item.inStock,
+      price: estimateMedicinePrice(item),
+      qty: normalizeQty(qty),
+      isCustom: item.isExternal === true,
+      genericName: item.genericName,
+      useCase: item.useCase,
+      manufacturer: item.manufacturer,
+      sourceUrl: item.sourceUrl,
+    }
+  }
+
+  function replaceCartWithItem(item: MedicineItem, qty = 1) {
+    persist([toCartLine(item, qty)])
   }
 
   function removeItem(id: string) {
@@ -119,6 +135,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       totalItems: items.reduce((sum, line) => sum + line.qty, 0),
       addItem,
+      replaceCartWithItem,
       removeItem,
       updateQty,
       syncItems,

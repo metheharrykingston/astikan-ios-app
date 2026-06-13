@@ -1,7 +1,6 @@
 import { createBrowserRouter } from "react-router-dom"
 
 import Splash from "../pages/Splash"
-import Company from "../pages/Company"
 import Login from "../pages/Login"
 import ForgotPassword from "../pages/ForgotPassword"
 import Home from "../pages/Home"
@@ -9,6 +8,8 @@ import Health from "../pages/Health"
 import Assessment from "../pages/assessment"
 import Terms from "../pages/Legal/Terms"
 import Privacy from "../pages/Legal/Privacy"
+import ContactUs from "../pages/Legal/ContactUs"
+import RefundsCancellation from "../pages/Legal/RefundsCancellation"
 import AIChat from "../pages/AIChat"
 import StressRelief from "../pages/StressChat"
 import Meditation from "../pages/Meditation"
@@ -20,7 +21,9 @@ import LabSchedule from "../pages/LabTest/schedule"
 import LabConfirm from "../pages/LabTest/confirm"
 import LabTracking from "../pages/LabTest/tracking"
 import LabReportViewer from "../pages/LabTest/report"
+import LabCancelRequest from "../pages/LabTest/cancel"
 import TeleConsultation from "../pages/TeleConsultation"
+import TeleOfferCheckout from "../pages/TeleConsultation/offerCheckout"
 import OpdPickup from "../pages/TeleConsultation/pickup"
 import TeleSchedule from "../pages/TeleConsultation/schedule"
 import TeleConfirm from "../pages/TeleConsultation/confirm"
@@ -33,11 +36,6 @@ import CartPage from "../pages/Cart"
 import PharmacyCheckout from "../pages/PharmacyCheckout"
 import PharmacySuccess from "../pages/PharmacySuccess"
 import MedicineTracking from "../pages/MedicineTracking"
-import Wallet from "../pages/Wallet"
-import Badges from "../pages/Badges"
-import WeekendTasks from "../pages/WeekendTasks"
-import WeekendTaskDetail from "../pages/WeekendTasks/detail"
-import SugarChallenge from "../pages/Challenges/SugarChallenge"
 import HealthAssessments from "../pages/HealthAssessments"
 import Settings from "../pages/Settings"
 import Address from "../pages/Address"
@@ -50,7 +48,19 @@ import MetricDetails from "../pages/MetricDetails"
 import BloodPressureLog from "../pages/MetricDetails/BloodPressureLog"
 import SugarLog from "../pages/MetricDetails/SugarLog"
 import TipBlog from "../pages/TipBlog"
+import Support from "../pages/Support"
 import RouteTransitionLayout from "./RouteTransitionLayout"
+import HospitalList from "../pages/HospitalBooking"
+import HospitalDetail from "../pages/HospitalBooking/detail"
+import HospitalBookSlot from "../pages/HospitalBooking/book"
+import HospitalConfirm from "../pages/HospitalBooking/confirm"
+import HospitalSuccess from "../pages/HospitalBooking/success"
+import MedicalFinanceForm from "../pages/MedicalFinance"
+import MedicalFinanceReview from "../pages/MedicalFinance/review"
+import MedicalFinanceSuccess from "../pages/MedicalFinance/success"
+import Wallet from "../pages/Wallet"
+import Insurance from "../pages/Insurance"
+import NotFound from "../pages/NotFound"
 
 export const router = createBrowserRouter([
   {
@@ -58,7 +68,6 @@ export const router = createBrowserRouter([
     element: <RouteTransitionLayout />,
     children: [
       { index: true, element: <Splash /> },
-      { path: "company", element: <Company /> },
       { path: "login", element: <Login /> },
       { path: "forgot", element: <ForgotPassword /> },
       { path: "assessment", element: <Assessment /> },
@@ -75,7 +84,9 @@ export const router = createBrowserRouter([
       { path: "lab-tests/confirm", element: <LabConfirm /> },
       { path: "lab-tests/track/:id", element: <LabTracking /> },
       { path: "lab-tests/report/:id", element: <LabReportViewer /> },
+      { path: "lab-tests/cancel/:id", element: <LabCancelRequest /> },
       { path: "teleconsultation", element: <TeleConsultation /> },
+      { path: "teleconsultation/offer-checkout", element: <TeleOfferCheckout /> },
       { path: "teleconsultation/pickup", element: <OpdPickup /> },
       { path: "teleconsultation/schedule", element: <TeleSchedule /> },
       { path: "teleconsultation/confirm", element: <TeleConfirm /> },
@@ -88,25 +99,34 @@ export const router = createBrowserRouter([
       { path: "pharmacy/checkout", element: <PharmacyCheckout /> },
       { path: "pharmacy/booking-success", element: <PharmacySuccess /> },
       { path: "cart", element: <CartPage /> },
-      { path: "weekend-tasks", element: <WeekendTasks /> },
-      { path: "weekend-tasks/:id", element: <WeekendTaskDetail /> },
-      { path: "weekend-tasks/sugar-challenge", element: <SugarChallenge /> },
       { path: "health-assessments", element: <HealthAssessments /> },
-      { path: "wallet", element: <Wallet /> },
-      { path: "badges", element: <Badges /> },
       { path: "settings", element: <Settings /> },
       { path: "address", element: <Address /> },
       { path: "profile-info", element: <ProfileInfo /> },
       { path: "health-info", element: <HealthInfo /> },
       { path: "bookings", element: <Bookings /> },
       { path: "reports", element: <Reports /> },
+      { path: "wallet", element: <Wallet /> },
       { path: "notifications", element: <Notifications /> },
+      { path: "hospitals", element: <HospitalList /> },
+      { path: "hospitals/:hospitalId", element: <HospitalDetail /> },
+      { path: "hospitals/:hospitalId/book", element: <HospitalBookSlot /> },
+      { path: "hospitals/:hospitalId/confirm", element: <HospitalConfirm /> },
+      { path: "hospitals/booking-success", element: <HospitalSuccess /> },
+      { path: "medical-finance", element: <MedicalFinanceForm /> },
+      { path: "insurance", element: <Insurance /> },
+      { path: "medical-finance/review", element: <MedicalFinanceReview /> },
+      { path: "medical-finance/success", element: <MedicalFinanceSuccess /> },
+      { path: "support", element: <Support /> },
       { path: "metric/:metricId", element: <MetricDetails /> },
       { path: "metric/blood-pressure/log", element: <BloodPressureLog /> },
       { path: "metric/sugar/log", element: <SugarLog /> },
       { path: "health-tips/:tipId", element: <TipBlog /> },
       { path: "terms", element: <Terms /> },
       { path: "privacy", element: <Privacy /> },
+      { path: "contact-us", element: <ContactUs /> },
+      { path: "refunds-cancellations", element: <RefundsCancellation /> },
+      { path: "*", element: <NotFound /> },
     ],
   },
 ])

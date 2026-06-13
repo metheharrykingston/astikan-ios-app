@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { FiActivity, FiArrowLeft } from "react-icons/fi"
+import { FiActivity, FiArrowLeft, FiCalendar, FiCheckCircle, FiEdit3 } from "react-icons/fi"
 import { useNavigate } from "react-router-dom"
 import { getLatestVital, getVitalHistory, saveVitalReading } from "../../services/vitalsApi"
 import "./metric-details.css"
@@ -18,6 +18,13 @@ export default function BloodPressureLog() {
   const latestLabel = useMemo(() => {
     if (!latest?.eventAt) return "No recent log"
     return new Date(latest.eventAt).toLocaleString("en-IN", { hour: "numeric", minute: "2-digit", day: "numeric", month: "short" })
+  }, [latest])
+
+  const status = useMemo(() => {
+    if (!latest) return { label: "Track", copy: "Add your latest reading", tone: "neutral" as const }
+    if (latest.sys <= 120 && latest.dia <= 80) return { label: "Normal", copy: "Normal blood pressure reading", tone: "good" as const }
+    if (latest.sys >= 140 || latest.dia >= 90) return { label: "Elevated", copy: "Reading needs attention", tone: "high" as const }
+    return { label: "Watch", copy: "Slightly above ideal range", tone: "mid" as const }
   }, [latest])
 
   useEffect(() => {
@@ -90,7 +97,7 @@ export default function BloodPressureLog() {
   }
 
   return (
-    <main className="metric-detail-page app-page-enter">
+    <main className="metric-detail-page metric-detail-page--bp app-page-enter">
       <header className="metric-detail-header app-fade-stagger">
         <button className="metric-back app-pressable" type="button" onClick={() => navigate(-1)} aria-label="Back">
           <FiArrowLeft />
@@ -99,18 +106,32 @@ export default function BloodPressureLog() {
       </header>
 
       <section className="metric-detail-shell app-content-slide">
-        <article className="metric-hero blue app-fade-stagger">
-          <span className="hero-icon"><FiActivity /></span>
-          <div>
-            <h2>{latest ? `${Math.round(latest.sys)}/${Math.round(latest.dia)}` : "—"} <small>mmHg</small></h2>
-            <p>{latest ? `Last updated ${latestLabel}` : "Log your latest reading"}</p>
+        <article className="bp-log-hero app-fade-stagger">
+          <div className="bp-log-hero-icon">
+            <span className="bp-log-hero-pulse"><FiActivity /></span>
+          </div>
+          <div className="bp-log-hero-copy">
+            <span className={`bp-log-status-pill ${status.tone}`}>
+              <FiCheckCircle />
+              {status.label}
+            </span>
+            <h2>{latest ? `${Math.round(latest.sys)}/${Math.round(latest.dia)}` : "—/—"} <small>mmHg</small></h2>
+            <p>{status.copy}</p>
+            <div className="bp-log-meta">
+              <span><FiCalendar /> {latest ? latestLabel : "Today"}</span>
+              <span>•</span>
+              <span><FiEdit3 /> Manual Entry</span>
+            </div>
           </div>
         </article>
 
-        <article className="metric-measure-card app-fade-stagger">
-          <div>
-            <h3>Enter latest reading</h3>
-            <p>Use the reading from your BP device to keep tracking accurate.</p>
+        <article className="bp-log-entry-card app-fade-stagger">
+          <div className="bp-log-entry-copy">
+            <img src="/assets/reference-ui/bp-track-card.webp" alt="" className="bp-log-entry-image" />
+            <div>
+              <h3>Daily tracking</h3>
+              <p>Log your reading to keep your analysis accurate and personal.</p>
+            </div>
           </div>
           <div className="bp-input-grid">
             <label className="bp-input">
@@ -134,12 +155,12 @@ export default function BloodPressureLog() {
           </div>
           {bpSaveStatus === "error" && <p className="bp-error">{bpSaveError}</p>}
           {bpSaveStatus === "saved" && <p className="bp-success">Saved successfully.</p>}
-          <button className="measure-btn app-pressable" type="button" onClick={saveBloodPressure} disabled={bpSaveStatus === "saving"}>
+          <button className="bp-log-save-btn app-pressable" type="button" onClick={saveBloodPressure} disabled={bpSaveStatus === "saving"}>
             {bpSaveStatus === "saving" ? "Saving..." : "Save Blood Pressure"}
           </button>
         </article>
 
-        <article className="metric-log-card app-fade-stagger">
+        <article className="metric-log-card metric-log-card--bp app-fade-stagger">
           <h3>Recent logs</h3>
           {history.length === 0 && <p className="metric-log-empty">No logs yet.</p>}
           {history.map((row, index) => (

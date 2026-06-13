@@ -6,8 +6,10 @@ export type EmployeeProfile = {
   department?: string | null
   designation?: string | null
   address_json?: Record<string, unknown> | null
+  date_of_joining?: string | null
+  status?: string | null
 }
 
 export async function fetchEmployeeProfile(userId: string) {
-  return apiGet<EmployeeProfile | null>(`/employees/profile/${encodeURIComponent(userId)}`)
+  return apiGet<EmployeeProfile | null>(`/users/profile/${encodeURIComponent(userId)}`)
 }
