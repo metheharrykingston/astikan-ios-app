@@ -42,3 +42,14 @@ Because Capacitor config uses `server.url = https://employee.astikan.tech`, the 
 - Kept `import FirebaseCore` and `FirebaseApp.configure()` in `ios/App/App/AppDelegate.swift`.
 - Added explicit Firebase iOS SDK package products for both `FirebaseCore` and `FirebaseMessaging` from `https://github.com/firebase/firebase-ios-sdk.git` in the Xcode project.
 - Bundle ID remains `com.astikan.healthcare`, version `1.3`, build `4`.
+
+## 2026-06-17 Codemagic npm registry fix
+
+Codemagic was failing during `npm ci` because `package-lock.json` had an OpenAI internal artifact registry URL for `@capacitor/push-notifications`. This project is now fixed by:
+
+- replacing internal resolved npm tarball URLs with `https://registry.npmjs.org/`
+- adding `.npmrc` pinned to the public npm registry
+- updating `codemagic.yaml` install steps to reset npm registry/proxy before `npm ci`
+- updating signed IPA workflow bundle identifier to `com.astikan.healthcare`
+
+If Codemagic still caches an old build, clear/rebuild from latest commit.

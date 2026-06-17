@@ -19,7 +19,10 @@ workflows:
           test -f capacitor.config.ts || (echo "capacitor.config.ts missing." && exit 1)
       - name: Install JS dependencies
         script: |
-          npm ci --no-audit --no-fund
+          npm config set registry https://registry.npmjs.org/
+          npm config delete proxy || true
+          npm config delete https-proxy || true
+          npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
       - name: Build Vite web app
         script: |
           npm run build
@@ -49,14 +52,17 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: ad_hoc
-        bundle_identifier: com.astikan.user
+        bundle_identifier: com.astikan.healthcare
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
     scripts:
       - name: Install JS dependencies
         script: |
-          npm ci --no-audit --no-fund
+          npm config set registry https://registry.npmjs.org/
+          npm config delete proxy || true
+          npm config delete https-proxy || true
+          npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
       - name: Build Vite web app
         script: |
           npm run build
