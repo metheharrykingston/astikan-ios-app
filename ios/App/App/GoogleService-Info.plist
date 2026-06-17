@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>201357365434-8pu8ip0mo8jgam2qunheakialdfmschh.apps.googleusercontent.com</string>
+	<string>201357365434-7lav4l8jve7dkpeh761jsjuac2a4do2u.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.201357365434-8pu8ip0mo8jgam2qunheakialdfmschh</string>
+	<string>com.googleusercontent.apps.201357365434-7lav4l8jve7dkpeh761jsjuac2a4do2u</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>201357365434-65sskla5ehcbp9s8odutvbouf8m90udl.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.astikan.user</string>
+	<string>com.astikan.healthcare</string>
 	<key>PROJECT_ID</key>
 	<string>astikan-healthcare-83920</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:201357365434:ios:fc61588c1788948eeaf283</string>
+	<string>1:201357365434:ios:ae60cd7f4d710c46eaf283</string>
 </dict>
 </plist>
