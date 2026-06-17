@@ -50,11 +50,11 @@ import SugarLog from "../pages/MetricDetails/SugarLog"
 import TipBlog from "../pages/TipBlog"
 import Support from "../pages/Support"
 import RouteTransitionLayout from "./RouteTransitionLayout"
-import HospitalList from "../pages/HospitalBooking"
-import HospitalDetail from "../pages/HospitalBooking/detail"
-import HospitalBookSlot from "../pages/HospitalBooking/book"
-import HospitalConfirm from "../pages/HospitalBooking/confirm"
-import HospitalSuccess from "../pages/HospitalBooking/success"
+import SurgeryList from "../pages/Surgery"
+import SurgeryDetail from "../pages/Surgery/detail"
+import SurgeryBook from "../pages/Surgery/book"
+import SurgeryConfirm from "../pages/Surgery/confirm"
+import SurgerySuccess from "../pages/Surgery/success"
 import MedicalFinanceForm from "../pages/MedicalFinance"
 import MedicalFinanceReview from "../pages/MedicalFinance/review"
 import MedicalFinanceSuccess from "../pages/MedicalFinance/success"
@@ -108,11 +108,13 @@ export const router = createBrowserRouter([
       { path: "reports", element: <Reports /> },
       { path: "wallet", element: <Wallet /> },
       { path: "notifications", element: <Notifications /> },
-      { path: "hospitals", element: <HospitalList /> },
-      { path: "hospitals/:hospitalId", element: <HospitalDetail /> },
-      { path: "hospitals/:hospitalId/book", element: <HospitalBookSlot /> },
-      { path: "hospitals/:hospitalId/confirm", element: <HospitalConfirm /> },
-      { path: "hospitals/booking-success", element: <HospitalSuccess /> },
+      { path: "surgeries", element: <SurgeryList /> },
+      { path: "surgeries/booking-success", element: <SurgerySuccess /> },
+      { path: "surgeries/:surgeryId/book", element: <SurgeryBook /> },
+      { path: "surgeries/:surgeryId/confirm", element: <SurgeryConfirm /> },
+      { path: "surgeries/:surgeryId", element: <SurgeryDetail /> },
+      { path: "hospitals", element: <SurgeryList /> },
+      { path: "hospitals/:surgeryId", element: <SurgeryDetail /> },
       { path: "medical-finance", element: <MedicalFinanceForm /> },
       { path: "insurance", element: <Insurance /> },
       { path: "medical-finance/review", element: <MedicalFinanceReview /> },

@@ -7,8 +7,15 @@ const config: CapacitorConfig = {
   appName: 'Astikan',
   webDir: 'dist',
   server: {
-    hostname: 'employee.astikan.tech',
-    androidScheme: 'https'
+    url: 'https://employee.astikan.tech',
+    cleartext: false,
+    allowNavigation: [
+      'employee.astikan.tech',
+      'api.astikan.tech',
+      '*.astikan.tech',
+      'sdk.cashfree.com',
+      '*.cashfree.com'
+    ]
   },
   plugins: {
     FirebaseAuthentication: {

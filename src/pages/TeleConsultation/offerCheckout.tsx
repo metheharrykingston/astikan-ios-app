@@ -116,6 +116,11 @@ export default function TeleOfferCheckout() {
           teleconsultPaidUnlocked: true,
           paidUnlocked: true,
           paidConsultPasses: paidStatus.availablePasses,
+          autoStartCall: true,
+          sessionDurationMinutes: paidStatus.consultationMinutes || CONSULT_DURATION_MINUTES,
+          paidSessionExpiresAt: new Date(
+            Date.now() + (paidStatus.consultationMinutes || CONSULT_DURATION_MINUTES) * 60 * 1000,
+          ).toISOString(),
         } as Record<string, unknown>,
       })
     } catch (error) {

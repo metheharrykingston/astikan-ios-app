@@ -1,0 +1,861 @@
+.surgery-page {
+  min-height: 100dvh;
+  background: #f7f9fd;
+  color: #0c1833;
+  font-family: "Manrope", system-ui, sans-serif;
+}
+
+.surgery-page button {
+  font-family: inherit;
+}
+
+.surgery-fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: min(100%, var(--app-frame-width));
+  min-height: 78px;
+  z-index: 50;
+  border-bottom: 1px solid #dfe4f0;
+  background: rgba(246, 247, 252, 0.96);
+  backdrop-filter: blur(10px);
+  padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.surgery-header-back,
+.surgery-header-action {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 12px;
+  border: 1px solid #d8dfec;
+  background: #edf2fb;
+  color: #29354f;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.surgery-header-back svg,
+.surgery-header-action svg {
+  width: 20px;
+  height: 20px;
+}
+
+.surgery-header-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.surgery-header-title h1 {
+  margin: 0;
+  font-size: 1.18rem;
+  line-height: 1.1;
+  font-family: "Satoshi", system-ui, sans-serif;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.surgery-header-title p {
+  margin: 3px 0 0;
+  color: #68758b;
+  font-size: 0.76rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.surgery-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.surgery-insurance-pill {
+  min-height: 42px;
+  border-radius: 999px;
+  background: #eaf9f1;
+  color: #17915f;
+  border: 1px solid #d8f1e4;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-weight: 900;
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+.surgery-insurance-pill svg {
+  width: 19px;
+  height: 19px;
+}
+
+.surgery-shell {
+  width: min(100%, var(--app-frame-width));
+  margin: 0 auto;
+  padding: 94px 16px calc(28px + env(safe-area-inset-bottom));
+}
+
+.surgery-shell.with-bottom-cta {
+  padding-bottom: calc(118px + env(safe-area-inset-bottom));
+}
+
+.surgery-main-hero {
+  min-height: 218px;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #dfebfb;
+  background: linear-gradient(120deg, #eef6ff 0%, #e4f0ff 52%, #d7eaff 100%);
+  box-shadow: 0 16px 34px rgba(46, 94, 164, 0.08);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.surgery-main-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(237, 246, 255, 0.98) 0%, rgba(237, 246, 255, 0.86) 44%, rgba(237, 246, 255, 0.12) 74%);
+  pointer-events: none;
+}
+
+.surgery-main-hero img {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 62%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.surgery-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 210px;
+}
+
+.surgery-hero-copy h2 {
+  margin: 0;
+  color: #071431;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.56rem;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.surgery-hero-copy p {
+  margin: 10px 0 18px;
+  color: #38465d;
+  font-size: 0.96rem;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.surgery-primary-btn {
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: #0b66f6;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 18px;
+  font-weight: 900;
+  font-size: 0.92rem;
+  box-shadow: 0 13px 26px rgba(11, 102, 246, 0.22);
+}
+
+.surgery-search-bar {
+  margin: 24px 0 28px;
+  min-height: 62px;
+  border: 1px solid #e2e7f0;
+  background: #ffffff;
+  border-radius: 17px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+  display: grid;
+  grid-template-columns: 26px 1fr 34px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  color: #8792a4;
+  font-weight: 700;
+}
+
+.surgery-search-bar svg {
+  width: 23px;
+  height: 23px;
+  color: #667085;
+}
+
+.surgery-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.surgery-section-head h2 {
+  margin: 0;
+  color: #071431;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.22rem;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.surgery-section-head p {
+  margin: 4px 0 0;
+  color: #6f7b91;
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.surgery-link-btn {
+  border: 0;
+  background: transparent;
+  color: #0b66f6;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+
+.popular-surgeries-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 76px;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 26px;
+  scrollbar-width: none;
+}
+
+.popular-surgeries-row::-webkit-scrollbar { display: none; }
+
+.popular-surgery-card {
+  border: 0;
+  background: transparent;
+  text-align: center;
+  color: #071431;
+  padding: 0;
+  font-weight: 900;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.popular-surgery-card img {
+  width: 72px;
+  height: 72px;
+  border-radius: 15px;
+  display: block;
+  margin: 0 auto 8px;
+  object-fit: cover;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.surgery-sort-btn {
+  color: #0b66f6;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.surgery-package-list {
+  display: grid;
+  gap: 14px;
+}
+
+.surgery-package-card {
+  border: 1px solid #e3e9f3;
+  background: #ffffff;
+  border-radius: 18px;
+  min-height: 170px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 14px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055);
+  color: #071431;
+  text-align: left;
+}
+
+.surgery-card-image {
+  width: 90px;
+  height: 112px;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #f3f6fb;
+  margin-top: 4px;
+}
+
+.surgery-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.surgery-card-content {
+  min-width: 0;
+}
+
+.surgery-card-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.surgery-card-copy h3 {
+  margin: 0;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+.surgery-card-copy p {
+  margin: 5px 0 16px;
+  color: #607087;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.surgery-price-label {
+  display: block;
+  color: #607087;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.surgery-card-price {
+  margin: 0;
+  color: #0068f6;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.surgery-feature-list {
+  display: grid;
+  gap: 7px;
+  min-width: 128px;
+}
+
+.surgery-feature-list span {
+  color: #46556c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.surgery-feature-list svg {
+  width: 14px;
+  height: 14px;
+  color: #23976d;
+}
+
+.surgery-view-package {
+  min-height: 42px;
+  border-radius: 13px;
+  border: 1.4px solid #0b66f6;
+  color: #0b66f6;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  margin-top: 12px;
+  justify-self: end;
+}
+
+.surgery-detail-hero-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 186px;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.surgery-detail-copy h2 {
+  margin: 0;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.42rem;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.surgery-detail-copy p {
+  margin: 10px 0 16px;
+  color: #49576e;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.surgery-rating-line {
+  color: #0b66f6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.surgery-rating-line svg {
+  width: 17px;
+  height: 17px;
+  color: #f7b500;
+  fill: #f7b500;
+}
+
+.surgery-detail-illustration {
+  height: 188px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #eff6ff;
+}
+
+.surgery-detail-illustration img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.surgery-price-card,
+.surgery-white-card {
+  border: 1px solid #e2e8f2;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+.surgery-price-card {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 16px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.surgery-starting-box {
+  border-right: 1px solid #e6ebf3;
+  padding-right: 16px;
+}
+
+.surgery-starting-box span {
+  display: block;
+  color: #607087;
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.surgery-starting-box strong {
+  display: block;
+  color: #0068f6;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 2rem;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.surgery-benefit-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.surgery-benefit {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.surgery-benefit-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eaf9f1;
+  color: #199564;
+  display: grid;
+  place-items: center;
+}
+
+.surgery-benefit h3 {
+  margin: 0;
+  color: #071431;
+  font-size: 0.84rem;
+  line-height: 1.1;
+}
+
+.surgery-benefit p {
+  margin: 3px 0 0;
+  color: #5f6b80;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.surgery-white-card {
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.surgery-white-card h2 {
+  margin: 0 0 16px;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.08rem;
+  letter-spacing: -0.03em;
+}
+
+.surgery-inclusion-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 18px;
+  row-gap: 16px;
+}
+
+.surgery-inclusion-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  color: #071431;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.surgery-inclusion-item:nth-child(odd) .inclusion-arrow {
+  display: none;
+}
+
+.surgery-inclusion-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #f2f6fb;
+  color: #365173;
+  display: grid;
+  place-items: center;
+}
+
+.surgery-package-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.surgery-tier-card {
+  min-height: 132px;
+  border: 1px solid #e4e9f2;
+  border-radius: 13px;
+  background: #ffffff;
+  color: #0b1934;
+  padding: 13px 8px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  text-align: center;
+}
+
+.surgery-tier-card.active {
+  border-color: #0b66f6;
+  background: #f4f9ff;
+  box-shadow: inset 0 0 0 1px rgba(11, 102, 246, 0.08);
+}
+
+.surgery-tier-card h3 {
+  margin: 0 0 12px;
+  color: #0b66f6;
+  font-size: 0.9rem;
+}
+
+.surgery-tier-card strong {
+  color: #06132f;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.18rem;
+  line-height: 1;
+}
+
+.surgery-tier-card p {
+  margin: 12px 0 0;
+  color: #526078;
+  font-size: 0.73rem;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.surgery-hospital-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 106px;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.surgery-hospital-row::-webkit-scrollbar { display: none; }
+
+.surgery-hospital-card {
+  min-height: 118px;
+  border-radius: 12px;
+  border: 1px solid #e6ebf3;
+  background: #ffffff;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  text-align: center;
+  padding: 8px;
+}
+
+.surgery-hospital-card img {
+  height: 44px;
+  width: 72px;
+  object-fit: contain;
+}
+
+.surgery-hospital-card h3 {
+  margin: 0;
+  font-size: 0.66rem;
+  line-height: 1.2;
+}
+
+.surgery-hospital-card p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #06132f;
+  font-weight: 800;
+}
+
+.surgery-hospital-card svg {
+  width: 12px;
+  height: 12px;
+  color: #f7b500;
+  fill: #f7b500;
+}
+
+.surgery-faq-card {
+  border: 1px solid #e3e9f3;
+  background: #ffffff;
+  border-radius: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.045);
+  overflow: hidden;
+}
+
+.surgery-faq-item {
+  border-bottom: 1px solid #ecf0f6;
+}
+
+.surgery-faq-item:last-child { border-bottom: 0; }
+
+.surgery-faq-question {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 0 16px;
+  color: #071431;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.surgery-faq-question svg {
+  color: #0b66f6;
+  min-width: 18px;
+}
+
+.surgery-faq-answer {
+  margin: -4px 0 0;
+  padding: 0 16px 14px;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.surgery-bottom-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  width: min(100%, var(--app-frame-width));
+  z-index: 45;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid #e2e8f2;
+  box-shadow: 0 -16px 36px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.surgery-help-mini {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.surgery-help-mini-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: #eef5ff;
+  color: #0b66f6;
+  display: grid;
+  place-items: center;
+}
+
+.surgery-help-mini h3 {
+  margin: 0;
+  color: #071431;
+  font-size: 0.86rem;
+}
+
+.surgery-help-mini p {
+  margin: 2px 0 0;
+  color: #657388;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.surgery-bottom-cta .surgery-primary-btn {
+  width: 100%;
+  min-height: 58px;
+  border-radius: 16px;
+  display: grid;
+  gap: 2px;
+  box-shadow: 0 14px 30px rgba(11, 102, 246, 0.24);
+}
+
+.surgery-bottom-cta .surgery-primary-btn small {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.86;
+}
+
+.surgery-form-card {
+  border: 1px solid #e3e9f3;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  margin-bottom: 16px;
+}
+
+.surgery-form-card h2 {
+  margin: 0 0 12px;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.1rem;
+}
+
+.surgery-form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.surgery-field span {
+  display: block;
+  font-size: 0.78rem;
+  color: #4b5870;
+  font-weight: 900;
+  margin-bottom: 7px;
+}
+
+.surgery-field input,
+.surgery-field select {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  padding: 0 13px;
+  color: #071431;
+  background: #ffffff;
+  font-weight: 800;
+  outline: 0;
+}
+
+.surgery-summary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.surgery-summary-line:last-child { border-bottom: 0; }
+.surgery-summary-line span { color: #657388; font-weight: 800; font-size: 0.82rem; }
+.surgery-summary-line strong { color: #071431; text-align: right; }
+
+.surgery-success-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  color: #0f9d68;
+  background: #e8fff3;
+  margin: 18px auto 14px;
+}
+
+.surgery-success-icon svg { width: 42px; height: 42px; }
+.surgery-success-title { text-align: center; margin: 0; font-family: "Satoshi", system-ui, sans-serif; font-size: 1.45rem; }
+.surgery-success-sub { text-align: center; color: #657388; font-weight: 700; margin: 8px 0 20px; }
+
+@media (max-width: 390px) {
+  .surgery-shell { padding-left: 14px; padding-right: 14px; }
+  .surgery-main-hero { padding: 20px; min-height: 200px; }
+  .surgery-hero-copy h2 { font-size: 1.36rem; }
+  .surgery-hero-copy p { font-size: 0.84rem; }
+  .surgery-package-card { grid-template-columns: 78px 1fr; gap: 11px; padding: 12px; }
+  .surgery-card-image { width: 78px; height: 104px; }
+  .surgery-card-top { grid-template-columns: 1fr; }
+  .surgery-feature-list { grid-template-columns: 1fr 1fr; min-width: 0; }
+  .surgery-feature-list span { font-size: 0.64rem; }
+  .surgery-view-package { width: 100%; }
+  .surgery-detail-hero-row { grid-template-columns: 1fr 140px; gap: 10px; }
+  .surgery-detail-illustration { height: 154px; }
+  .surgery-starting-box strong { font-size: 1.65rem; }
+  .surgery-bottom-cta { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 350px) {
+  .surgery-insurance-pill { display: none; }
+  .surgery-price-card { grid-template-columns: 1fr; }
+  .surgery-starting-box { border-right: 0; border-bottom: 1px solid #e6ebf3; padding: 0 0 14px; }
+  .surgery-inclusion-grid { grid-template-columns: 1fr; }
+  .surgery-inclusion-item:nth-child(odd) .inclusion-arrow { display: block; }
+}

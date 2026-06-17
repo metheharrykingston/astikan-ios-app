@@ -24,6 +24,35 @@ export type HospitalSlotBooking = HospitalSlotBookingInput & {
   createdAt: string
 }
 
+
+export type SurgeryBookingInput = {
+  surgeryId: string
+  surgeryName: string
+  treatmentType: string
+  packageName: string
+  packagePrice: number
+  hospitalName: string
+  location: string
+  date: string
+  day: string
+  time: string
+  slotType: string
+  patient: {
+    fullName: string
+    mobileNumber: string
+    age: string
+    gender: string
+  }
+  amount?: number
+}
+
+export type SurgeryBooking = SurgeryBookingInput & {
+  id: string
+  bookingId: string
+  status: string
+  createdAt: string
+}
+
 export type FinanceDocument = {
   label: string
   fileName: string
@@ -74,11 +103,18 @@ function writeLocal<T>(key: string, value: T) {
 }
 
 const HOSPITAL_BOOKINGS_KEY = 'astikan_hospital_bookings'
+const SURGERY_BOOKINGS_KEY = 'astikan_surgery_bookings'
 const FINANCE_APPLICATIONS_KEY = 'astikan_finance_applications'
 
 export async function createHospitalBooking(input: HospitalSlotBookingInput): Promise<HospitalSlotBooking> {
   const booking = await apiPost<HospitalSlotBooking, HospitalSlotBookingInput>('/consumer/hospital-bookings', input)
   saveLatestHospitalBooking(booking)
+  return booking
+}
+
+export async function createSurgeryBooking(input: SurgeryBookingInput): Promise<SurgeryBooking> {
+  const booking = await apiPost<SurgeryBooking, SurgeryBookingInput>('/consumer/surgery-bookings', input)
+  saveLatestSurgeryBooking(booking)
   return booking
 }
 
@@ -102,6 +138,15 @@ export function saveLatestHospitalBooking(booking: HospitalSlotBooking) {
   writeLocal(HOSPITAL_BOOKINGS_KEY, [booking, ...rows.filter((row) => row.id !== booking.id)])
 }
 
+export function getLatestSurgeryBooking() {
+  return readLocal<SurgeryBooking[]>(SURGERY_BOOKINGS_KEY, [])[0] ?? null
+}
+
+export function saveLatestSurgeryBooking(booking: SurgeryBooking) {
+  const rows = readLocal<SurgeryBooking[]>(SURGERY_BOOKINGS_KEY, [])
+  writeLocal(SURGERY_BOOKINGS_KEY, [booking, ...rows.filter((row) => row.id !== booking.id)])
+}
+
 export function getLatestFinanceApplication() {
   return readLocal<FinanceApplication[]>(FINANCE_APPLICATIONS_KEY, [])[0] ?? null
 }
@@ -112,5 +157,5 @@ export function saveLatestFinanceApplication(application: FinanceApplication) {
 }
 
 export function fetchConsumerAdminOverview() {
-  return apiGet<{ hospitalBookings: HospitalSlotBooking[]; financeApplications: FinanceApplication[] }>('/consumer/admin/overview')
+  return apiGet<{ hospitalBookings: HospitalSlotBooking[]; surgeryBookings: SurgeryBooking[]; financeApplications: FinanceApplication[] }>('/consumer/admin/overview')
 }

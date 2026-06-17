@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { FiArrowLeft, FiCalendar, FiCamera, FiCheckCircle, FiFileText, FiImage, FiMic, FiPhoneCall, FiPlus, FiRefreshCcw, FiSend, FiUploadCloud, FiX } from "react-icons/fi"
+import { FiArrowLeft, FiCalendar, FiCamera, FiFileText, FiImage, FiMic, FiPhoneCall, FiPlus, FiRefreshCcw, FiSend, FiUploadCloud, FiX } from "react-icons/fi"
 import { useLocation, useNavigate } from "react-router-dom"
 import { analyzeMedicalAttachment, askAiChat, getAiLabReadinessQuestions, getAiThread, type ReadinessQuestion } from "../../services/aiApi"
 import { ensureEmployeeActor } from "../../services/actorsApi"
 import { getEmployeeAuthSession, getEmployeeCompanySession } from "../../services/authApi"
 import { addNotification } from "../../services/notificationCenter"
-import { getTeleconsultPaidAccessStatus } from "../../services/teleconsultPaidApi"
+import { getTeleconsultPaidAccessStatus, type TeleconsultPaidAccessStatus } from "../../services/teleconsultPaidApi"
 import { useProcessLoading } from "../../app/process-loading"
 import { getLabCatalog } from "../../services/labApi"
 import { fetchPharmacyProducts } from "../../services/pharmacyApi"
@@ -79,6 +79,7 @@ const defaultSuggestions = [
   "What tests should I consider first?",
   "Any urgent warning signs to watch?",
 ]
+const PAID_CONSULT_DURATION_MINUTES = 15
 const THREAD_STORAGE_KEY = "employee_ai_thread_id"
 const THREAD_LAST_KEY = "employee_ai_thread_id:last"
 const MESSAGE_STORAGE_PREFIX = "employee_ai_thread_messages:"
@@ -122,6 +123,13 @@ function nowTime() {
   const hh = h % 12 || 12
   const ap = h >= 12 ? "PM" : "AM"
   return `${hh}:${m} ${ap}`
+}
+
+function formatCountdown(totalSeconds: number) {
+  const safe = Math.max(0, totalSeconds)
+  const minutes = Math.floor(safe / 60)
+  const seconds = safe % 60
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")} left`
 }
 
 function slugifyDoctorKey(value: string) {
@@ -345,7 +353,17 @@ function shouldOfferMedicine(content: string) {
 export default function AIChat() {
   const navigate = useNavigate()
   const location = useLocation()
-  const navState = location.state as { doctor?: DoctorIntro; feelingId?: string; theme?: string; paidUnlocked?: boolean } | undefined
+  const navState = location.state as
+    | {
+        doctor?: DoctorIntro
+        feelingId?: string
+        theme?: string
+        paidUnlocked?: boolean
+        autoStartCall?: boolean
+        paidSessionExpiresAt?: string
+        sessionDurationMinutes?: number
+      }
+    | undefined
   const companySession = getEmployeeCompanySession()
   const authSession = getEmployeeAuthSession()
   const { start: startProcessLoading, stop: stopProcessLoading } = useProcessLoading()
@@ -379,6 +397,12 @@ export default function AIChat() {
   const feelingKey = navState?.feelingId ?? "default"
   const themeKey = navState?.theme ?? feelingKey
   const requiresPaidAccess = feelingKey !== "default"
+  const initialSessionExpiresAt = (() => {
+    const expiresAt = String(navState?.paidSessionExpiresAt ?? "").trim()
+    if (!expiresAt) return ""
+    const parsed = Date.parse(expiresAt)
+    return Number.isFinite(parsed) && parsed > Date.now() ? new Date(parsed).toISOString() : ""
+  })()
   const doctorThreadKey = slugifyDoctorKey(doctorIntro.name)
   const stableThreadId = useMemo(() => {
     const identity = authSession?.userId?.trim() || companySession?.companyId?.trim() || "guest"
@@ -400,8 +424,17 @@ export default function AIChat() {
   const [doctorPresence, setDoctorPresence] = useState<DoctorPresence>("online")
   const [lastSeenLabel, setLastSeenLabel] = useState("last seen recently")
   const [showProfilePreview, setShowProfilePreview] = useState(false)
-  const [paidAccessUnlocked, setPaidAccessUnlocked] = useState(Boolean(navState?.paidUnlocked))
-  const [showPaidGate, setShowPaidGate] = useState(false)
+  const [paidAccessUnlocked, setPaidAccessUnlocked] = useState(!requiresPaidAccess || (Boolean(navState?.paidUnlocked) && Boolean(initialSessionExpiresAt)))
+  const [paidStatus, setPaidStatus] = useState<TeleconsultPaidAccessStatus>({
+    unlocked: false,
+    availablePasses: 0,
+    consultationMinutes: PAID_CONSULT_DURATION_MINUTES,
+  })
+  const [paidSessionExpiresAt, setPaidSessionExpiresAt] = useState(initialSessionExpiresAt)
+  const [paidSessionRemainingSeconds, setPaidSessionRemainingSeconds] = useState(() => {
+    if (!initialSessionExpiresAt) return 0
+    return Math.max(0, Math.ceil((Date.parse(initialSessionExpiresAt) - Date.now()) / 1000))
+  })
   const [filePickerMode, setFilePickerMode] = useState<FilePickerMode>({
     intent: "general",
     accept: "image/*,application/pdf",
@@ -417,26 +450,91 @@ export default function AIChat() {
   const [cameraFacingMode, setCameraFacingMode] = useState<"user" | "environment">("environment")
   const [cameraError, setCameraError] = useState("")
   const [cameraLoading, setCameraLoading] = useState(false)
+  const autoStartPaidCallRef = useRef(Boolean(navState?.autoStartCall))
+  const paidSessionExpiryTimerRef = useRef<number | null>(null)
+  const paidFlowLocked = requiresPaidAccess && !paidAccessUnlocked
 
   useEffect(() => {
     if (!requiresPaidAccess) {
       setPaidAccessUnlocked(true)
+      setPaidSessionExpiresAt("")
       return
     }
     let active = true
     void getTeleconsultPaidAccessStatus()
       .then((status) => {
         if (!active) return
-        setPaidAccessUnlocked(Boolean(navState?.paidUnlocked) || status.availablePasses > 0)
+        setPaidStatus(status)
+        setPaidAccessUnlocked(Boolean(navState?.paidUnlocked) && Boolean(initialSessionExpiresAt))
       })
       .catch(() => {
         if (!active) return
-        setPaidAccessUnlocked(Boolean(navState?.paidUnlocked))
+        setPaidAccessUnlocked(Boolean(navState?.paidUnlocked) && Boolean(initialSessionExpiresAt))
       })
     return () => {
       active = false
     }
-  }, [navState?.paidUnlocked, requiresPaidAccess])
+  }, [initialSessionExpiresAt, navState?.paidUnlocked, requiresPaidAccess])
+
+  useEffect(() => {
+    if (!requiresPaidAccess) return
+    if (!paidAccessUnlocked || !paidSessionExpiresAt) return
+    const expiresAtMs = Date.parse(paidSessionExpiresAt)
+    if (!Number.isFinite(expiresAtMs)) {
+      setPaidAccessUnlocked(false)
+      setPaidSessionExpiresAt("")
+      return
+    }
+    const remainingMs = expiresAtMs - Date.now()
+    if (remainingMs <= 0) {
+      setPaidAccessUnlocked(false)
+      setPaidSessionExpiresAt("")
+      void endGlobalVoiceCall().catch(() => undefined)
+      return
+    }
+    if (paidSessionExpiryTimerRef.current) {
+      window.clearTimeout(paidSessionExpiryTimerRef.current)
+    }
+    paidSessionExpiryTimerRef.current = window.setTimeout(() => {
+      setPaidAccessUnlocked(false)
+      setPaidSessionExpiresAt("")
+      void endGlobalVoiceCall().catch(() => undefined)
+    }, remainingMs)
+    return () => {
+      if (paidSessionExpiryTimerRef.current) {
+        window.clearTimeout(paidSessionExpiryTimerRef.current)
+        paidSessionExpiryTimerRef.current = null
+      }
+    }
+  }, [endGlobalVoiceCall, paidAccessUnlocked, paidSessionExpiresAt, requiresPaidAccess])
+
+  useEffect(() => {
+    if (!requiresPaidAccess || !paidAccessUnlocked || !autoStartPaidCallRef.current) return
+    if (voiceAgentStatus === "live" || voiceAgentStatus === "connecting") {
+      autoStartPaidCallRef.current = false
+      return
+    }
+    autoStartPaidCallRef.current = false
+    void startGlobalVoiceCall(doctorIntro).catch(() => undefined)
+  }, [doctorIntro, paidAccessUnlocked, requiresPaidAccess, startGlobalVoiceCall, voiceAgentStatus])
+
+  useEffect(() => {
+    if (!requiresPaidAccess || !paidAccessUnlocked || !paidSessionExpiresAt) {
+      setPaidSessionRemainingSeconds(0)
+      return
+    }
+    const expiresAtMs = Date.parse(paidSessionExpiresAt)
+    if (!Number.isFinite(expiresAtMs)) {
+      setPaidSessionRemainingSeconds(0)
+      return
+    }
+    const updateRemaining = () => {
+      setPaidSessionRemainingSeconds(Math.max(0, Math.ceil((expiresAtMs - Date.now()) / 1000)))
+    }
+    updateRemaining()
+    const timer = window.setInterval(updateRemaining, 1000)
+    return () => window.clearInterval(timer)
+  }, [paidAccessUnlocked, paidSessionExpiresAt, requiresPaidAccess])
 
   useEffect(() => {
     if (!cameraIntent) {
@@ -487,7 +585,7 @@ export default function AIChat() {
   }, [cameraIntent, cameraFacingMode])
 
   function openPaidConsultGate() {
-    setShowPaidGate(true)
+    continueToPaidCheckout()
   }
 
   function continueToPaidCheckout() {
@@ -498,12 +596,23 @@ export default function AIChat() {
         continueRoute: "/ai-chat",
         continueState: {
           doctor: doctorIntro,
-          feelingId: navState?.feelingId,
-          theme: navState?.theme,
-          paidUnlocked: true,
+          feelingId: feelingKey === "default" ? undefined : feelingKey,
+          theme: themeKey,
         },
       },
     })
+  }
+
+  function startPaidDoctorSession(options?: { autoStartCall?: boolean; durationMinutes?: number }) {
+    const durationMinutes = Math.max(
+      5,
+      Number(options?.durationMinutes ?? paidStatus.consultationMinutes ?? navState?.sessionDurationMinutes ?? PAID_CONSULT_DURATION_MINUTES) ||
+        PAID_CONSULT_DURATION_MINUTES,
+    )
+    const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
+    autoStartPaidCallRef.current = Boolean(options?.autoStartCall)
+    setPaidSessionExpiresAt(expiresAt)
+    setPaidAccessUnlocked(true)
   }
 
   function markAssessmentDone(intent: AssessmentIntent) {
@@ -520,7 +629,7 @@ export default function AIChat() {
   }
 
   function launchUploadPicker(intent: AssessmentIntent, capture?: "user" | "environment") {
-    if (requiresPaidAccess && !paidAccessUnlocked) {
+    if (paidFlowLocked) {
       openPaidConsultGate()
       return
     }
@@ -533,7 +642,7 @@ export default function AIChat() {
   }
 
   async function openGuidedCamera(intent: AssessmentIntent, withVoice = false) {
-    if (requiresPaidAccess && !paidAccessUnlocked) {
+    if (paidFlowLocked) {
       openPaidConsultGate()
       return
     }
@@ -916,7 +1025,7 @@ export default function AIChat() {
     if (!content || !threadId) {
       return
     }
-    if (requiresPaidAccess && !paidAccessUnlocked) {
+    if (paidFlowLocked) {
       openPaidConsultGate()
       return
     }
@@ -1039,7 +1148,7 @@ export default function AIChat() {
   }
 
   function startVoiceInput() {
-    if (requiresPaidAccess && !paidAccessUnlocked) {
+    if (paidFlowLocked) {
       openPaidConsultGate()
       return
     }
@@ -1135,7 +1244,7 @@ export default function AIChat() {
     } catch {}
   }
 
-  const guidedAssessmentOptions = requiresPaidAccess
+  const doctorAssistTools = requiresPaidAccess
     ? [
         {
           id: "report" as const,
@@ -1161,7 +1270,7 @@ export default function AIChat() {
         {
           id: "pain" as const,
           title: "Pain Area",
-          subtitle: "Back camera",
+          subtitle: "Camera review",
           action: () => void openGuidedCamera("pain", true),
           icon: <FiCamera />,
         },
@@ -1194,6 +1303,7 @@ export default function AIChat() {
                   : doctorPresence === "last_seen"
                     ? lastSeenLabel
                     : "online"}
+                {requiresPaidAccess && paidAccessUnlocked && paidSessionRemainingSeconds > 0 ? ` • ${formatCountdown(paidSessionRemainingSeconds)}` : ""}
               </div>
             </div>
           </div>
@@ -1201,16 +1311,20 @@ export default function AIChat() {
         <button
           type="button"
           className="ai-chat-call-btn app-pressable"
-          onClick={() => {
-            if (requiresPaidAccess && !paidAccessUnlocked) {
+          onClick={async () => {
+            if (paidFlowLocked) {
+              if (paidStatus.availablePasses > 0) {
+                startPaidDoctorSession({ autoStartCall: true, durationMinutes: paidStatus.consultationMinutes })
+                return
+              }
               openPaidConsultGate()
               return
             }
             if (voiceAgentStatus === "live" || voiceAgentStatus === "connecting") {
-              void endGlobalVoiceCall()
+              await endGlobalVoiceCall().catch(() => undefined)
               return
             }
-            void startGlobalVoiceCall(doctorIntro)
+            await startGlobalVoiceCall(doctorIntro).catch(() => undefined)
           }}
           aria-label={`Start ${doctorIntro.name} voice consultation`}
         >
@@ -1219,39 +1333,6 @@ export default function AIChat() {
       </header>
 
       <div className="ai-chat-body" ref={chatBodyRef}>
-        {requiresPaidAccess && paidAccessUnlocked && (
-          <section className="guided-assessment-card">
-            <div className="guided-assessment-head">
-              <div>
-                <h3>15 Min Care Assistant</h3>
-                <p>Upload reports, show medicines, tongue, or affected area so {doctorIntro.name} can guide the next step.</p>
-              </div>
-              <span className="guided-assessment-pill">Paid</span>
-            </div>
-            <div className="guided-assessment-grid">
-              {guidedAssessmentOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`guided-assessment-tile app-pressable ${assessmentDone[option.id] ? "done" : ""}`}
-                  onClick={option.action}
-                >
-                  <span className="guided-assessment-icon">{assessmentDone[option.id] ? <FiCheckCircle /> : option.icon}</span>
-                  <strong>{option.title}</strong>
-                  <small>{option.subtitle}</small>
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="guided-assessment-voice app-pressable"
-              onClick={() => void openGuidedCamera("pain", true)}
-            >
-              <FiPhoneCall />
-              Start voice + camera review
-            </button>
-          </section>
-        )}
         {messages.map((msg) => (
           <div key={msg.id} className={`message-row ${msg.from === "user" ? "user" : "ai"} bubble-enter`}>
             <div className="message-bubble">
@@ -1362,13 +1443,17 @@ export default function AIChat() {
             <button
               type="button"
               className="ai-chat-profile-call app-pressable"
-              onClick={() => {
+              onClick={async () => {
                 setShowProfilePreview(false)
-                if (requiresPaidAccess && !paidAccessUnlocked) {
+                if (paidFlowLocked) {
+                  if (paidStatus.availablePasses > 0) {
+                    startPaidDoctorSession({ autoStartCall: true, durationMinutes: paidStatus.consultationMinutes })
+                    return
+                  }
                   openPaidConsultGate()
                   return
                 }
-                void startGlobalVoiceCall(doctorIntro)
+                await startGlobalVoiceCall(doctorIntro).catch(() => undefined)
               }}
             >
               <FiPhoneCall />
@@ -1381,37 +1466,65 @@ export default function AIChat() {
       <div className="composer-wrap">
         {!!attachedName && <div className="attached-pill">{isProcessingAttachment ? `Analyzing upload: ${attachedName}` : `Attached: ${attachedName}`}</div>}
 
-        <div className="quick-actions">
-          {suggestions.map((item) => (
-            <button key={item} onClick={() => sendMessage(item)} type="button">
-              {item}
-            </button>
-          ))}
-        </div>
+        {requiresPaidAccess && paidAccessUnlocked && (
+          <div className="doctor-assist-tools" aria-label="Doctor assist tools">
+            {doctorAssistTools.map((tool) => (
+              <button
+                key={tool.id}
+                type="button"
+                className={`doctor-assist-tool app-pressable ${assessmentDone[tool.id] ? "done" : ""}`}
+                onClick={tool.action}
+              >
+                <span className="doctor-assist-tool-icon">{tool.icon}</span>
+                <span className="doctor-assist-tool-copy">
+                  <strong>{tool.title}</strong>
+                  <small>{tool.subtitle}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
-        <div className="ai-chat-input">
-          <button className="icon-btn" onClick={openPicker} type="button" aria-label="Add image">
-            <FiImage />
-          </button>
-          <button className="icon-btn" onClick={startVoiceInput} type="button" aria-label="Voice input">
-            <FiMic />
-          </button>
+        {paidFlowLocked ? (
+          <div className="ai-chat-call-hint">
+            <strong>Start your consultation</strong>
+            <p>Tap the call button above to continue with {doctorIntro.name}.</p>
+          </div>
+        ) : (
+          <>
+            <div className="quick-actions">
+              {suggestions.map((item) => (
+                <button key={item} onClick={() => sendMessage(item)} type="button">
+                  {item}
+                </button>
+              ))}
+            </div>
 
-          <input
-            placeholder="Describe your symptoms..."
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                sendMessage()
-              }
-            }}
-          />
+            <div className="ai-chat-input">
+              <button className="icon-btn" onClick={openPicker} type="button" aria-label="Add image">
+                <FiImage />
+              </button>
+              <button className="icon-btn" onClick={startVoiceInput} type="button" aria-label="Voice input">
+                <FiMic />
+              </button>
 
-          <button className="send-btn" onClick={() => sendMessage()} type="button" aria-label="Send">
-            <FiSend />
-          </button>
-        </div>
+              <input
+                placeholder="Describe your symptoms..."
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    sendMessage()
+                  }
+                }}
+              />
+
+              <button className="send-btn" onClick={() => sendMessage()} type="button" aria-label="Send">
+                <FiSend />
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <input
@@ -1422,28 +1535,6 @@ export default function AIChat() {
         className="hidden-file"
         onChange={onPickFile}
       />
-
-      {showPaidGate && (
-        <div className="ai-paid-gate-overlay" onClick={() => setShowPaidGate(false)}>
-          <section className="ai-paid-gate-card app-page-enter" onClick={(event) => event.stopPropagation()}>
-            <h3>Unlock this doctor for ₹49</h3>
-            <p>This feeling doctor is part of the paid care flow. Pay once to continue chatting, start voice call, upload reports, and use the 15 minute doctor assist flow.</p>
-            <div className="ai-paid-gate-points">
-              <span>Chat and continue with the agent</span>
-              <span>Voice call with camera/report guidance</span>
-              <span>Medicine, lab, and next OPD recommendation flow</span>
-            </div>
-            <div className="ai-paid-gate-actions">
-              <button type="button" className="ai-paid-gate-secondary app-pressable" onClick={() => setShowPaidGate(false)}>
-                Later
-              </button>
-              <button type="button" className="ai-paid-gate-primary app-pressable" onClick={continueToPaidCheckout}>
-                Pay ₹49 and Continue
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
 
       {isListening && (
         <div className="voice-overlay" onClick={stopListening}>

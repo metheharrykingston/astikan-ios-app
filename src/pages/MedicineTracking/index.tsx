@@ -26,12 +26,40 @@ function readLatestPharmacyOrderId() {
   }
 }
 
+function normalizeOrderStatus(status: string) {
+  const normalized = String(status || "placed").trim().toLowerCase().replace(/[\s-]+/g, "_")
+  if (["created", "cod_order_created", "paid", "payment_confirmed", "prescription_review", "stock_allocated"].includes(normalized)) return "placed"
+  if (["packing_started", "order_packed"].includes(normalized)) return "packed"
+  if (["dispatch_ready", "rider_assigned", "order_dispatched"].includes(normalized)) return "dispatched"
+  if (["cancelled", "canceled", "order_cancelled", "order_canceled"].includes(normalized)) return "order_cancelled"
+  if (["refund_successfull", "refunded"].includes(normalized)) return "refund_successful"
+  return normalized
+}
+
 function formatStatusLabel(status: string) {
-  return status
+  const normalized = normalizeOrderStatus(status)
+  const map: Record<string, string> = {
+    placed: "Order Placed",
+    packed: "Order Packed",
+    dispatched: "Order Dispatched",
+    out_for_delivery: "Out for Delivery",
+    delivered: "Delivered",
+    order_cancelled: "Order Cancelled",
+    request_cancelled: "Request Cancelled",
+    processing_refund: "Processing Refund",
+    refund_successful: "Refund Successful",
+  }
+  return map[normalized] || normalized
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ")
 }
+
+const CANCELLATION_STEPS = [
+  { key: "order_cancelled", title: "Order Cancelled", icon: <FiClock />, note: "Cancellation accepted before packing." },
+  { key: "processing_refund", title: "Processing Refund", icon: <FiClock />, note: "Cashfree refund request has been created." },
+  { key: "refund_successful", title: "Refund Successful", icon: <FiCheckCircle />, note: "Refund has been successfully processed." },
+] as const
 
 export default function MedicineTracking() {
   const navigate = useNavigate()
@@ -72,16 +100,14 @@ export default function MedicineTracking() {
     }
   }, [orderIdFromQuery])
 
+  const normalizedStatus = useMemo(() => normalizeOrderStatus(order?.status || "placed"), [order?.status])
+  const isCancellationFlow = ["order_cancelled", "request_cancelled", "processing_refund", "refund_successful"].includes(normalizedStatus)
+
   const activeStepIndex = useMemo(() => {
-    const normalizedStatus = String(order?.status || "placed").trim().toLowerCase()
-    const index = TRACKING_STEPS.findIndex((step) => step.key === normalizedStatus)
-    if (index >= 0) return index
-    if (normalizedStatus === "cancelled" || normalizedStatus === "refunded") return -1
-    if (normalizedStatus === "cod_order_created" || normalizedStatus === "payment_confirmed") return 0
-    if (normalizedStatus === "order_packed" || normalizedStatus === "packing_started") return 1
-    if (normalizedStatus === "order_dispatched" || normalizedStatus === "dispatch_ready" || normalizedStatus === "rider_assigned") return 2
-    return 0
-  }, [order?.status])
+    const steps = isCancellationFlow ? CANCELLATION_STEPS : TRACKING_STEPS
+    const index = steps.findIndex((step) => step.key === normalizedStatus)
+    return index >= 0 ? index : 0
+  }, [normalizedStatus, isCancellationFlow])
 
   const liveStatusLabel = useMemo(() => {
     if (!order?.status) return "Order Placed"
@@ -123,11 +149,13 @@ export default function MedicineTracking() {
           <div className="eta-left">
             <h2>{loading ? "Loading live status..." : liveStatusLabel}</h2>
             <p>
-              {order?.status === "cancelled"
-                ? "This pharmacy order was cancelled."
-                : order?.status === "refunded"
-                  ? "Refund is being processed for this order."
-                  : expectedDelivery ? `Expected delivery: ${expectedDelivery}` : "Your medicine order preview and latest status are shown below."}
+              {isCancellationFlow
+                ? normalizedStatus === "refund_successful"
+                  ? "Refund has been successfully processed for this medicine order."
+                  : normalizedStatus === "request_cancelled"
+                    ? "Cancellation request was cancelled."
+                    : "Refund is being processed automatically through Cashfree."
+                : expectedDelivery ? `Expected delivery: ${expectedDelivery}` : "Your medicine order preview and latest status are shown below."}
             </p>
           </div>
           <div className="eta-icon"><FiPackage /></div>
@@ -178,8 +206,8 @@ export default function MedicineTracking() {
         <section className="track-timeline app-fade-stagger">
           {loading && <div className="track-state-card">Loading current order status...</div>}
           {!loading && error && <div className="track-state-card">{error}</div>}
-          {!loading && !error && order?.status !== "cancelled" && order?.status !== "refunded"
-            ? TRACKING_STEPS.map((item, index) => {
+          {!loading && !error
+            ? (isCancellationFlow ? CANCELLATION_STEPS : TRACKING_STEPS).map((item, index) => {
                 const done = activeStepIndex >= index
                 const current = activeStepIndex === index
                 return (
@@ -193,15 +221,6 @@ export default function MedicineTracking() {
                 )
               })
             : null}
-          {!loading && !error && (order?.status === "cancelled" || order?.status === "refunded") ? (
-            <article className="timeline-item done current">
-              <span className="timeline-icon"><FiClock /></span>
-              <div>
-                <h4>{liveStatusLabel}</h4>
-                <p>{order.status === "refunded" ? "Refund has been initiated for this order." : "This order was stopped by the operations team."}</p>
-              </div>
-            </article>
-          ) : null}
         </section>
       </section>
     </main>

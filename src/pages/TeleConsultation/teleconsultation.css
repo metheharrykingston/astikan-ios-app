@@ -1639,3 +1639,567 @@
   background: #d6fbf5 !important;
   color: #05685f !important;
 }
+
+/* Surgery-flow appointment redesign: fixed medicine-style header + screenshot-matched doctor list */
+.tele-page {
+  background: #f7f9fd !important;
+  color: #0c1833 !important;
+}
+
+.tele-header {
+  min-height: 78px !important;
+  padding: calc(12px + env(safe-area-inset-top)) 14px 12px !important;
+  border-bottom: 1px solid #dfe4f0 !important;
+  background: rgba(246, 247, 252, 0.96) !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: none !important;
+}
+
+.tele-back {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 12px !important;
+  border: 1px solid #d8dfec !important;
+  background: #edf2fb !important;
+  color: #29354f !important;
+}
+
+.tele-header h1 {
+  font-size: 1.55rem !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.045em !important;
+  color: #091734 !important;
+}
+
+.tele-content {
+  padding: 104px 16px calc(112px + env(safe-area-inset-bottom)) !important;
+  background: #f7f9fd !important;
+}
+
+.mode-row {
+  height: 78px !important;
+  gap: 0 !important;
+  border: 1px solid #dfe5ef !important;
+  border-radius: 17px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04) !important;
+}
+
+.mode-card,
+.mode-card.active {
+  min-height: 76px !important;
+  height: 76px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  padding: 0 10px !important;
+  text-align: center !important;
+}
+
+.mode-card:first-child {
+  border-right: 1px solid #dfe5ef !important;
+}
+
+.mode-card.active {
+  background: #eef4ff !important;
+  color: #0b66f6 !important;
+  box-shadow: inset 0 0 0 1px rgba(11, 102, 246, 0.18) !important;
+}
+
+.mode-card svg {
+  color: #8a22d0 !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.mode-card h3 {
+  margin: 0 !important;
+  font-size: 1rem !important;
+  letter-spacing: -0.02em !important;
+  color: #101a36 !important;
+}
+
+.mode-card.active h3 {
+  color: #0b66f6 !important;
+}
+
+.search-wrap {
+  margin-top: 22px !important;
+  min-height: 62px !important;
+  border-radius: 18px !important;
+  border: 1px solid #e1e7f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04) !important;
+  padding: 0 16px !important;
+  display: flex !important;
+}
+
+.search-wrap input {
+  min-height: 60px !important;
+  font-size: 1rem !important;
+  color: #111827 !important;
+}
+
+.search-wrap input::placeholder {
+  color: #a0a8b7 !important;
+}
+
+.tele-filter-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #667085;
+  display: grid;
+  place-items: center;
+}
+
+.specialty-row {
+  margin-top: 18px !important;
+  gap: 12px !important;
+  padding-bottom: 8px !important;
+}
+
+.specialty-chip {
+  min-height: 54px !important;
+  border-radius: 999px !important;
+  padding: 0 22px !important;
+  border: 1px solid #e1e7f0 !important;
+  background: #ffffff !important;
+  color: #6b7280 !important;
+  font-size: 0.96rem !important;
+  font-weight: 800 !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.035) !important;
+}
+
+.specialty-chip.active {
+  background: #812481 !important;
+  border-color: #812481 !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(129, 36, 129, 0.2) !important;
+}
+
+.doctor-section-head {
+  margin: 28px 2px 18px !important;
+}
+
+.doctor-section-head h3 {
+  font-family: "Satoshi", system-ui, sans-serif !important;
+  font-size: 1.55rem !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.045em !important;
+  color: #091734 !important;
+}
+
+.doctor-section-head p {
+  margin-top: 10px !important;
+  font-size: 1.02rem !important;
+  line-height: 1.48 !important;
+  color: #68758b !important;
+  font-weight: 700 !important;
+}
+
+.doctor-list,
+.doctor-list.ready {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.doctor-card,
+.tele-page .doctor-card,
+.tele-page .doctor-card.selected {
+  position: relative !important;
+  min-height: 250px !important;
+  border: 1px solid #e3e9f3 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  color: #071431 !important;
+  padding: 18px !important;
+  display: grid !important;
+  grid-template-columns: 104px 1fr 84px !important;
+  column-gap: 16px !important;
+  row-gap: 14px !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055) !important;
+  transform: none !important;
+}
+
+.doctor-card.selected {
+  border-color: #d8eee9 !important;
+}
+
+.doctor-avatar {
+  width: 94px !important;
+  height: 94px !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+  background: #e8eef7 !important;
+  grid-row: 1 / 2 !important;
+  align-self: start !important;
+}
+
+.doctor-avatar::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #14c780;
+  border: 3px solid #ffffff;
+  z-index: 2;
+}
+
+.doctor-main {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.doctor-selected-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  background: #dff8f0;
+  color: #0b9465;
+  padding: 0 14px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.doctor-main h4,
+.tele-page .doctor-card.selected .doctor-main h4,
+.tele-page .doctor-card:not(.selected) .doctor-main h4 {
+  margin: 0 !important;
+  color: #071431 !important;
+  font-family: "Satoshi", system-ui, sans-serif !important;
+  font-size: 1.18rem !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.doctor-main p,
+.tele-page .doctor-card.selected .doctor-main p,
+.tele-page .doctor-card:not(.selected) .doctor-main p {
+  margin: 7px 0 0 !important;
+  color: #6b7280 !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+}
+
+.doctor-rating-block {
+  margin-top: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  grid-column: auto !important;
+  flex-wrap: wrap !important;
+}
+
+.doctor-rating,
+.tele-page .doctor-card.selected .doctor-rating,
+.tele-page .doctor-card:not(.selected) .doctor-rating {
+  color: #667085 !important;
+  font-size: 0.86rem !important;
+  font-weight: 800 !important;
+}
+
+.doctor-rating svg {
+  color: #f7b500 !important;
+  fill: #f7b500 !important;
+}
+
+.doctor-reviews,
+.tele-page .doctor-card.selected .doctor-reviews,
+.tele-page .doctor-card:not(.selected) .doctor-reviews {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  color: #667085 !important;
+  font-size: 0.86rem !important;
+  font-weight: 800 !important;
+}
+
+.doctor-reviews svg {
+  color: #8a22d0 !important;
+}
+
+.doctor-fee-side {
+  justify-self: end;
+  align-self: start;
+  text-align: right;
+  padding-top: 4px;
+}
+
+.doctor-fee-side strong {
+  display: block;
+  color: #11835d;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.doctor-fee-side span {
+  display: block;
+  margin-top: 9px;
+  color: #6b7280;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.doctor-card-actions {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.doctor-schedule-btn,
+.doctor-book-now-btn {
+  min-height: 58px;
+  border-radius: 15px;
+  font-size: 1rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.doctor-schedule-btn {
+  border: 1px solid #dfe5ef;
+  background: #ffffff;
+  color: #0b66f6;
+}
+
+.doctor-book-now-btn {
+  border: 0;
+  background: #0b66f6;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(11, 102, 246, 0.2);
+}
+
+.tele-footer {
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+  border-top: 1px solid #e2e8f2 !important;
+}
+
+.tele-footer .book-btn,
+.book-btn {
+  min-height: 64px !important;
+  border-radius: 18px !important;
+  background: #0b66f6 !important;
+  box-shadow: 0 14px 30px rgba(11, 102, 246, 0.24) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+}
+
+@media (max-width: 390px) {
+  .tele-content { padding-left: 14px !important; padding-right: 14px !important; }
+  .doctor-card,
+  .tele-page .doctor-card,
+  .tele-page .doctor-card.selected {
+    grid-template-columns: 86px 1fr 72px !important;
+    column-gap: 12px !important;
+    padding: 16px !important;
+  }
+  .doctor-avatar { width: 78px !important; height: 78px !important; }
+  .doctor-main h4 { font-size: 1.06rem !important; }
+  .doctor-fee-side strong { font-size: 1.26rem !important; }
+  .doctor-card-actions { grid-column: 1 / 4; }
+}
+
+@media (max-width: 340px) {
+  .doctor-card-actions { grid-template-columns: 1fr; }
+  .doctor-card,
+  .tele-page .doctor-card,
+  .tele-page .doctor-card.selected { grid-template-columns: 76px 1fr !important; }
+  .doctor-fee-side { grid-column: 2; justify-self: start; text-align: left; }
+  .doctor-card-actions { grid-column: 1 / 3; }
+}
+
+/* Final compact doctor appointment overrides to match the provided UI closely */
+.tele-content {
+  padding: 88px 14px calc(86px + env(safe-area-inset-bottom)) !important;
+}
+
+.mode-row {
+  min-height: 58px !important;
+  gap: 10px !important;
+}
+
+.mode-card,
+.tele-page .mode-card {
+  min-height: 56px !important;
+  height: 56px !important;
+  padding: 8px 10px !important;
+  border-radius: 16px !important;
+  gap: 8px !important;
+}
+
+.mode-card svg { width: 20px !important; height: 20px !important; }
+.mode-card h3 { font-size: 0.9rem !important; line-height: 1.05 !important; }
+.mode-card p { display: none !important; }
+
+.search-wrap,
+.tele-page .search-wrap {
+  margin-top: 14px !important;
+  min-height: 52px !important;
+  border-radius: 16px !important;
+  padding: 0 14px !important;
+}
+
+.search-wrap input {
+  min-height: 50px !important;
+  font-size: 0.9rem !important;
+}
+
+.specialty-row {
+  margin-top: 12px !important;
+  gap: 10px !important;
+  padding-bottom: 4px !important;
+}
+
+.specialty-chip,
+.tele-page .specialty-chip {
+  min-height: 42px !important;
+  padding: 0 15px !important;
+  border-radius: 14px !important;
+  font-size: 0.84rem !important;
+  white-space: nowrap !important;
+}
+
+.doctor-section-head {
+  margin: 18px 2px 10px !important;
+}
+
+.doctor-section-head h3 {
+  font-size: 1.22rem !important;
+  letter-spacing: -0.04em !important;
+}
+
+.doctor-section-head p {
+  font-size: 0.88rem !important;
+  margin-top: 5px !important;
+}
+
+.doctor-list { gap: 10px !important; }
+
+.doctor-card,
+.tele-page .doctor-card,
+.tele-page .doctor-card.selected {
+  min-height: 168px !important;
+  padding: 13px !important;
+  grid-template-columns: 76px 1fr 70px !important;
+  column-gap: 12px !important;
+  row-gap: 8px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05) !important;
+}
+
+.doctor-avatar {
+  width: 68px !important;
+  height: 68px !important;
+}
+
+.doctor-avatar::after {
+  width: 11px !important;
+  height: 11px !important;
+  right: 1px !important;
+  bottom: 5px !important;
+  border-width: 2px !important;
+}
+
+.doctor-selected-pill {
+  min-height: 22px !important;
+  padding: 0 10px !important;
+  font-size: 0.68rem !important;
+  margin-bottom: 6px !important;
+}
+
+.doctor-main h4,
+.tele-page .doctor-card.selected .doctor-main h4,
+.tele-page .doctor-card:not(.selected) .doctor-main h4 {
+  font-size: 1rem !important;
+  line-height: 1.12 !important;
+}
+
+.doctor-main p,
+.tele-page .doctor-card.selected .doctor-main p,
+.tele-page .doctor-card:not(.selected) .doctor-main p {
+  font-size: 0.79rem !important;
+  margin-top: 4px !important;
+}
+
+.doctor-rating-block {
+  margin-top: 7px !important;
+  gap: 7px !important;
+}
+
+.doctor-rating,
+.doctor-reviews,
+.tele-page .doctor-card.selected .doctor-rating,
+.tele-page .doctor-card:not(.selected) .doctor-rating,
+.tele-page .doctor-card.selected .doctor-reviews,
+.tele-page .doctor-card:not(.selected) .doctor-reviews {
+  font-size: 0.72rem !important;
+  gap: 4px !important;
+}
+
+.doctor-fee-side { padding-top: 2px !important; }
+.doctor-fee-side strong { font-size: 1.12rem !important; }
+.doctor-fee-side span { font-size: 0.68rem !important; margin-top: 4px !important; }
+
+.doctor-card-actions {
+  grid-column: 2 / 4 !important;
+  gap: 9px !important;
+}
+
+.doctor-schedule-btn,
+.doctor-book-now-btn {
+  min-height: 42px !important;
+  border-radius: 12px !important;
+  font-size: 0.8rem !important;
+  gap: 7px !important;
+}
+
+.tele-footer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)) !important; }
+.tele-footer .book-btn,
+.book-btn {
+  min-height: 56px !important;
+  border-radius: 16px !important;
+  font-size: 1rem !important;
+}
+
+@media (max-width: 390px) {
+  .doctor-card,
+  .tele-page .doctor-card,
+  .tele-page .doctor-card.selected {
+    grid-template-columns: 68px 1fr 64px !important;
+    padding: 12px !important;
+    column-gap: 10px !important;
+  }
+  .doctor-avatar { width: 62px !important; height: 62px !important; }
+  .doctor-main h4 { font-size: 0.95rem !important; }
+  .doctor-fee-side strong { font-size: 1rem !important; }
+  .doctor-card-actions { grid-column: 1 / 4 !important; }
+}

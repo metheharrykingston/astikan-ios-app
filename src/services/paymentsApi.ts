@@ -1,5 +1,4 @@
 import { apiGet, apiPost } from "./api";
-import { Capacitor } from "@capacitor/core";
 import { getEmployeeAuthSession, getEmployeeCompanySession } from "./authApi";
 
 export type PaymentQuote = {
@@ -102,28 +101,6 @@ declare global {
     Cashfree?: (config: { mode: "sandbox" | "production" }) => {
       checkout: (config: { paymentSessionId: string; redirectTarget?: "_modal" }) => Promise<unknown>;
     };
-    CFPaymentGateway?: {
-      setCallback: (callbacks: {
-        onVerify: (result: { orderID?: string } | string) => void;
-        onError: (error: {
-          message?: string;
-          code?: string;
-          status?: string;
-          orderID?: string;
-        }) => void;
-      }) => void;
-      doWebCheckoutPayment: (payment: {
-        theme: {
-          navigationBarBackgroundColor: string;
-          navigationBarTextColor: string;
-        };
-        session: {
-          payment_session_id: string;
-          orderID: string;
-          environment: "PRODUCTION";
-        };
-      }) => void;
-    };
   }
 }
 
@@ -159,55 +136,7 @@ function validateCashfreeSession(paymentSessionId: string, cashfreeOrderId?: str
     throw new Error("Cashfree returned an invalid payment session. Please retry.");
   }
 
-  if (Capacitor.isNativePlatform() && !orderId) {
-    throw new Error("Cashfree returned an invalid order reference. Please retry.");
-  }
-
   return { sessionId, orderId };
-}
-
-async function openNativeCashfreeCheckout(paymentSessionId: string, cashfreeOrderId: string) {
-  const gateway = window.CFPaymentGateway;
-  if (!gateway) {
-    throw new Error("Cashfree native checkout is unavailable. Please reinstall the latest Astikan app.");
-  }
-
-  return new Promise<CashfreeCheckoutOpenResult>((resolve, reject) => {
-    let settled = false;
-    const finish = (callback: () => void) => {
-      if (settled) return;
-      settled = true;
-      callback();
-    };
-
-    gateway.setCallback({
-      onVerify: (result) => {
-        finish(() =>
-          resolve({
-            state: "PENDING",
-            rawStatus: "VERIFY",
-            payload: result,
-          }),
-        );
-      },
-      onError: (error) => {
-        const message = String(error?.message ?? "").trim();
-        finish(() => reject(new Error(message || "Payment was not completed.")));
-      },
-    });
-
-    gateway.doWebCheckoutPayment({
-      theme: {
-        navigationBarBackgroundColor: "#0b66f6",
-        navigationBarTextColor: "#ffffff",
-      },
-      session: {
-        payment_session_id: paymentSessionId,
-        orderID: cashfreeOrderId,
-        environment: "PRODUCTION",
-      },
-    });
-  });
 }
 
 export async function openCashfreeCheckout(
@@ -215,10 +144,6 @@ export async function openCashfreeCheckout(
   cashfreeOrderId?: string | null,
 ): Promise<CashfreeCheckoutOpenResult> {
   const validated = validateCashfreeSession(paymentSessionId, cashfreeOrderId);
-
-  if (Capacitor.isNativePlatform()) {
-    return openNativeCashfreeCheckout(validated.sessionId, validated.orderId);
-  }
 
   await ensureCashfreeScript();
   const mode = window.location.hostname.includes("astikan.tech") ? "production" : "sandbox";
@@ -246,7 +171,11 @@ export async function openCashfreeCheckout(
     .toUpperCase();
 
   if (!rawStatus) {
-    throw new Error("Payment was closed before completion.");
+    return {
+      state: "PENDING",
+      rawStatus: "UNKNOWN",
+      payload: result,
+    };
   }
 
   if (rawStatus === "SUCCESS" || rawStatus === "PAID") {

@@ -17,23 +17,17 @@ type LabBooking = {
 }
 
 const NORMAL_STEPS = [
-  { id: "pending", label: "Pending registration" },
-  { id: "phlebo", label: "Phlebo assigned" },
-  { id: "sample", label: "Sample collected" },
-  { id: "lab", label: "Received in lab" },
-  { id: "reported", label: "Report ready" },
+  { id: "lab_booked", label: "Lab Booked" },
+  { id: "phlebo_assigned", label: "Phlebo Assigned" },
+  { id: "sample_collected", label: "Sample Collected" },
+  { id: "received_in_lab", label: "Received in Lab" },
+  { id: "report_ready", label: "Report Ready" },
 ]
 
 const CANCELLATION_STEPS = [
   { id: "cancellation_requested", label: "Cancellation Requested" },
-  { id: "cancellation_accepted", label: "Cancellation Accepted" },
-  { id: "processing_refund", label: "Processing Refund" },
-  { id: "refunded", label: "Refunded" },
-]
-
-const CANCELLATION_REJECTED_STEPS = [
-  { id: "cancellation_requested", label: "Cancellation Requested" },
-  { id: "cancellation_rejected", label: "Cancellation Rejected" },
+  { id: "processing_refund", label: "Full Refund Initiated" },
+  { id: "refund_successful", label: "Refund Successful" },
 ]
 
 function normalizeStatus(status: string) {
@@ -47,21 +41,17 @@ function isCancellationStatus(status: string) {
 
 function activeStepId(status: string) {
   const normalized = normalizeStatus(status)
-  if (normalized.includes("refund") && (normalized.includes("done") || normalized.includes("success") || normalized === "refunded")) return "refunded"
-  if (normalized.includes("processing_refund") || normalized.includes("refund_processing") || normalized.includes("refund_pending")) return "processing_refund"
-  if (normalized.includes("accepted") || normalized === "cancelled") return "cancellation_accepted"
-  if (normalized.includes("rejected")) return "cancellation_rejected"
+  if (normalized.includes("refund") && (normalized.includes("success") || normalized.includes("done") || normalized === "refunded")) return "refund_successful"
+  if (normalized.includes("processing_refund") || normalized.includes("refund_processing") || normalized.includes("refund_pending") || normalized.includes("refund_initiated")) return "processing_refund"
   if (normalized.includes("cancel")) return "cancellation_requested"
-  if (normalized.includes("report") || normalized.includes("complete")) return "reported"
-  if (normalized.includes("received_in_lab") || normalized.includes("in_lab") || normalized.includes("processing")) return "lab"
-  if (normalized.includes("sample_collected") || normalized.includes("sample_collection") || normalized.includes("sample")) return "sample"
-  if (normalized.includes("phlebo") || normalized.includes("assigned") || normalized.includes("collection_team")) return "phlebo"
-  return "pending"
+  if (normalized.includes("report") || normalized.includes("complete") || normalized.includes("result")) return "report_ready"
+  if (normalized.includes("received_in_lab") || normalized.includes("in_lab") || normalized.includes("lab_received") || normalized.includes("processing")) return "received_in_lab"
+  if (normalized.includes("sample_collected") || normalized.includes("sample_collection") || normalized.includes("sample")) return "sample_collected"
+  if (normalized.includes("phlebo") || normalized.includes("assigned") || normalized.includes("collection_team")) return "phlebo_assigned"
+  return "lab_booked"
 }
 
 function stepsForStatus(status: string) {
-  const normalized = normalizeStatus(status)
-  if (normalized.includes("rejected")) return CANCELLATION_REJECTED_STEPS
   if (isCancellationStatus(status)) return CANCELLATION_STEPS
   return NORMAL_STEPS
 }
@@ -74,7 +64,7 @@ export default function LabTracking() {
   const [reportError, setReportError] = useState("")
 
   const resolvedBooking = liveBooking
-  const status = resolvedBooking?.status ?? "pending_registration"
+  const status = resolvedBooking?.status ?? "lab_booked"
   const stepId = activeStepId(status)
   const steps = stepsForStatus(status)
   const activeIndex = Math.max(0, steps.findIndex((item) => item.id === stepId))
@@ -179,7 +169,7 @@ export default function LabTracking() {
         })}
       </section>
 
-      {stepId === "reported" && (
+      {stepId === "report_ready" && (
         <div className="lab-actions app-fade-stagger">
           <button className="lab-primary-btn" type="button" onClick={() => void downloadReport()} disabled={reportLoading}>
             {reportLoading ? "Opening Report..." : resolvedBooking?.reportKey ? "Download Report" : "Report Upload Pending"}

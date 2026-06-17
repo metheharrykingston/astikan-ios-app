@@ -153,6 +153,7 @@ TRIAGE FLOW:
 const VoiceAgentContext = createContext<VoiceAgentContextValue | null>(null)
 
 type VoiceCallModePlugin = {
+  ensurePermissions(): Promise<{ granted: boolean; microphone?: string }>
   startCallMode(options: { title?: string; text?: string }): Promise<{ started: boolean }>
   stopCallMode(): Promise<{ stopped: boolean }>
 }
@@ -288,6 +289,19 @@ export function VoiceAgentProvider({ children }: { children: ReactNode }) {
       await NativeVoiceCallMode.stopCallMode()
     } catch {
       // best effort only
+    }
+  }
+
+  async function ensureVoicePermissions() {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      return
+    }
+    const result = await NativeVoiceCallMode.ensurePermissions().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "Microphone permission denied"
+      throw new Error(message)
+    })
+    if (!result?.granted) {
+      throw new Error("Microphone permission denied. Please allow mic access for Astikan.")
     }
   }
 
@@ -566,10 +580,11 @@ export function VoiceAgentProvider({ children }: { children: ReactNode }) {
     const resolvedDoctor = { ...doctor, ...incomingDoctor }
     const resolvedProfile = getVoiceProfile(resolvedDoctor.name)
     setDoctor(resolvedDoctor)
-    setOpen(true)
-    setStatus("connecting")
-    setError("")
     try {
+      await ensureVoicePermissions()
+      setOpen(true)
+      setStatus("connecting")
+      setError("")
       const audioCtx = new AudioContext()
       audioCtxRef.current = audioCtx
       if (audioCtx.state !== "running") {
@@ -835,6 +850,7 @@ export function VoiceAgentProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       setStatus("error")
+      setOpen(true)
       setError(err instanceof Error ? err.message : "Voice start failed")
       await stopNativeBackgroundMode()
     }

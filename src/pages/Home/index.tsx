@@ -35,7 +35,7 @@ type QuickAccessItem = {
   subtitle?: string
   tone: "purple" | "red" | "blue" | "indigo" | "orange" | "green" | "gold"
   badge?: string
-  icon: "stress" | "lab" | "consult" | "pharmacy" | "insurance"   | "hospital" | "finance"
+  icon: "stress" | "lab" | "consult" | "pharmacy" | "insurance" | "surgery" | "finance"
 }
 
 const quickAccess: QuickAccessItem[] = [
@@ -43,7 +43,7 @@ const quickAccess: QuickAccessItem[] = [
   { title: "Lab Test", subtitle: "Fast slots", tone: "blue", icon: "lab" },
   { title: "Doctor", subtitle: "OPD / IPD", tone: "indigo", icon: "consult" },
   { title: "Medicines", subtitle: "Meds refill", tone: "green", icon: "pharmacy" },
-  { title: "Hospital", subtitle: "Book slots", tone: "blue", icon: "hospital" },
+  { title: "Surgery", subtitle: "Packages", tone: "blue", icon: "surgery" },
   { title: "Finance", subtitle: "Medical loan", tone: "gold", icon: "finance" },
 ]
 
@@ -52,7 +52,7 @@ const quickAccessRoutes: Partial<Record<QuickAccessItem["title"], string>> = {
   "Lab Test": "/lab-tests",
   Doctor: "/teleconsultation",
   Medicines: "/pharmacy",
-  Hospital: "/hospitals",
+  Surgery: "/surgeries",
   Finance: "/medical-finance",
 }
 
@@ -63,7 +63,7 @@ function quickIcon(name: QuickAccessItem["icon"]) {
   if (String(name) === "insurance") return <FiShield />
   if (name === "consult") return <FaStethoscope />
   if (name === "pharmacy") return <FaPills />
-  if (name === "hospital") return <FaHospital />
+  if (name === "surgery") return <FaHospital />
   if (name === "finance") return <FiCreditCard />
   return <FiSmile />
 }
@@ -1243,7 +1243,7 @@ export default function Home() {
                 <span className="feeling-icon">{item.icon}</span>
                 <h4>{item.title}</h4>
                 <span className={`priority ${item.level}`}>
-                  {paidTeleconsultAccess.availablePasses > 0 ? `paid ${paidTeleconsultAccess.consultationMinutes} min` : item.priority}
+                  {item.priority}
                 </span>
               </button>
             ))}

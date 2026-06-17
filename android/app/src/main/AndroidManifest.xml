@@ -5,24 +5,32 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Location: used only when the user taps/uses address auto-fill or SOS. No background location. -->
+    <!-- Location: address auto-fill, nearby providers and SOS. No background location. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- Emergency SOS / dialer. Prefer ACTION_DIAL from the app; CALL_PHONE is present if direct-call flow is enabled later. -->
+    <!-- Emergency SOS / dialer. Prefer ACTION_DIAL from the app; CALL_PHONE is available if direct-call flow is enabled. -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Camera/media for prescription upload, AI camera review and optional emergency attachments. -->
+    <!-- Camera/media for prescription upload, reports, AI camera review and emergency attachments. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
-    <!-- Voice input / AI voice review / optional emergency voice note. -->
+    <!-- Voice input / AI doctor voice / teleconsultation audio. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Android 13+ notifications for booking, receipt, SOS and status updates. -->
+    <!-- Android 13+ notifications for booking, receipt, consultation, refund and status updates. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Foreground service support for long-running AI voice / consultation sessions. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Keep hardware optional so Play Store does not exclude devices without camera/GPS/telephony/mic. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -47,6 +55,22 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <!-- Default FCM notification appearance. Keep channel id stable for future updates. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/colorPrimary" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="astikan_default" />
+
+        <service
+            android:name=".VoiceCallForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|mediaPlayback" />
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"

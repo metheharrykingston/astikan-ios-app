@@ -39,7 +39,7 @@ export default function LabCancelRequest() {
       await requestLabOrderCancellation(reference, reason.trim())
       navigate(`/lab-tests/track/${reference}`, { replace: true })
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not send cancellation request right now.")
+      setMessage(error instanceof Error ? error.message : "Could not cancel this booking right now.")
     } finally {
       setSubmitting(false)
     }
@@ -53,21 +53,21 @@ export default function LabCancelRequest() {
         </button>
         <div>
           <h1>Cancel Lab Booking</h1>
-          <p>Send a cancellation request to Astikan Care Operations</p>
+          <p>Full refund starts automatically if phlebo is not assigned</p>
         </div>
       </header>
 
       <section className="lab-cancel-card app-content-slide">
-        <span className="cancel-pill">Cancellation Request</span>
+        <span className="cancel-pill">Cancellation & Refund</span>
         <h2>{booking?.title || "Lab Test Booking"}</h2>
         <p className="cancel-ref">Booking ID: {booking?.bookingId || reference}</p>
         <label>
-          Reason for cancellation
+          Reason for cancellation / refund
           <textarea rows={6} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Example: I am not available today / booked by mistake / want to reschedule later." />
         </label>
         {message ? <div className="confirm-error">{message}</div> : null}
         <button className="lab-primary-btn" type="button" disabled={submitting} onClick={submit}>
-          <FiSend /> {submitting ? "Sending request..." : "Submit Cancel Request"}
+          <FiSend /> {submitting ? "Starting refund..." : "Cancel & Start Refund"}
         </button>
         <button className="btn-secondary" type="button" onClick={() => navigate(`/lab-tests/track/${reference}`)}>
           Track Status

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
   FiActivity,
-  FiArrowUpRight,
   FiArrowLeft,
   FiCalendar,
   FiCheckCircle,
   FiClock,
   FiDroplet,
+  FiFilter,
   FiHeart,
   FiMapPin,
   FiSearch,
@@ -76,6 +76,7 @@ type TeleNavState = {
   paidAccessFeelingId?: string
   sessionDurationMinutes?: number
   featuredDoctor?: FeelingDoctor
+  autoStartPaidConsult?: boolean
 }
 
 type TeleBooking = {
@@ -102,79 +103,15 @@ const DEMO_DOCTORS: Array<{
   distance: string
   eta: string
   fee: number
+  rating: number
+  reviews: number
 }> = [
-  {
-    handle: "riza",
-    fullName: "Dr. Riza Yuhi",
-    specialization: "Internal Medicine",
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=160&q=80",
-    distance: "2.5 km away",
-    eta: "15 mins",
-    fee: 25,
-  },
-  {
-    handle: "sarah",
-    fullName: "Dr. Sarah Chen",
-    specialization: "Cardiology",
-    avatar: "https://images.unsplash.com/photo-1594824475317-6f6d4f3a04c9?auto=format&fit=crop&w=160&q=80",
-    distance: "3.2 km away",
-    eta: "20 mins",
-    fee: 35,
-  },
-  {
-    handle: "michael",
-    fullName: "Dr. Michael Park",
-    specialization: "Dermatology",
-    avatar: "https://images.unsplash.com/photo-1614436163996-25cee5f54290?auto=format&fit=crop&w=160&q=80",
-    distance: "1.8 km away",
-    eta: "12 mins",
-    fee: 30,
-  },
-  {
-    handle: "aarav",
-    fullName: "Dr. Aarav Patel",
-    specialization: "Pulmonology",
-    avatar: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=160&q=80",
-    distance: "2.9 km away",
-    eta: "18 mins",
-    fee: 32,
-  },
-  {
-    handle: "aisha",
-    fullName: "Dr. Aisha Qureshi",
-    specialization: "Internal Medicine",
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=160&q=80",
-    distance: "2.1 km away",
-    eta: "14 mins",
-    fee: 28,
-  },
-  {
-    handle: "vivek",
-    fullName: "Dr. Vivek Menon",
-    specialization: "Cardiology",
-    avatar: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=160&q=80",
-    distance: "4.0 km away",
-    eta: "22 mins",
-    fee: 38,
-  },
-  {
-    handle: "isha",
-    fullName: "Dr. Isha Kapoor",
-    specialization: "Dermatology",
-    avatar: "https://images.unsplash.com/photo-1551836022-4c4c79ecde51?auto=format&fit=crop&w=160&q=80",
-    distance: "1.6 km away",
-    eta: "11 mins",
-    fee: 30,
-  },
-  {
-    handle: "naveen",
-    fullName: "Dr. Naveen Rao",
-    specialization: "Pulmonology",
-    avatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=160&q=80",
-    distance: "3.4 km away",
-    eta: "19 mins",
-    fee: 33,
-  },
+  { handle: "subodh", fullName: "Dr. Subodh Chandra", specialization: "Internal Medicine", avatar: "/assets/doctors/doctor-1.webp", distance: "2.5 km away", eta: "15 mins", fee: 0, rating: 4.8, reviews: 126 },
+  { handle: "pawan", fullName: "Dr. Pawan Kr. Gupta", specialization: "Internal Medicine", avatar: "/assets/doctors/doctor-2.webp", distance: "3.2 km away", eta: "20 mins", fee: 500, rating: 4.7, reviews: 89 },
+  { handle: "neha", fullName: "Dr. Neha Sharma", specialization: "Internal Medicine", avatar: "/assets/doctors/doctor-3.webp", distance: "1.8 km away", eta: "12 mins", fee: 400, rating: 4.6, reviews: 64 },
+  { handle: "rohit", fullName: "Dr. Rohit Verma", specialization: "Internal Medicine", avatar: "/assets/doctors/doctor-4.webp", distance: "2.9 km away", eta: "18 mins", fee: 300, rating: 4.5, reviews: 52 },
+  { handle: "sarah", fullName: "Dr. Sarah Chen", specialization: "Cardiology", avatar: "/assets/doctors/doctor-5.webp", distance: "3.2 km away", eta: "20 mins", fee: 500, rating: 4.7, reviews: 91 },
+  { handle: "isha", fullName: "Dr. Isha Kapoor", specialization: "Dermatology", avatar: "/assets/doctors/doctor-6.webp", distance: "1.6 km away", eta: "11 mins", fee: 450, rating: 4.6, reviews: 77 },
 ]
 const MAX_JOIN_RETRIES = 3
 const JOIN_RETRY_DELAY_MS = 1200
@@ -286,6 +223,7 @@ export default function TeleConsultation() {
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [joinReady, setJoinReady] = useState(true)
   const [autoJoin, setAutoJoin] = useState(false)
+  const autoStartPaidConsultRef = useRef(Boolean(incomingState?.autoStartPaidConsult))
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [doctorOffset, setDoctorOffset] = useState(0)
   const [doctorHasMore, setDoctorHasMore] = useState(true)
@@ -306,8 +244,6 @@ export default function TeleConsultation() {
   const pendingVoiceBookRef = useRef<{ doctorId?: string; mode?: "tele" | "opd" } | null>(null)
 
   const selectedDoctorInfo = doctors.find((doctor) => doctor.id === selectedDoctor) ?? null
-  const selectedDoctorIsFree = isDoctorFreeForCurrentFlow(selectedDoctorInfo, mode, teleOfferActive)
-  const selectedDoctorRequiresPayment = Boolean(selectedDoctorInfo) && !prepaidConsultActive && !selectedDoctorIsFree && (selectedDoctorInfo?.fee ?? 0) > 0
   const effectiveStep: JourneyStep = step === "video" && !selectedDoctorInfo ? "options" : step
   const joinWindowStart = useMemo(() => {
     if (!scheduledAt) return null
@@ -343,8 +279,8 @@ export default function TeleConsultation() {
         listKey: `${row.user_id}-${offset + index}`,
         name: row.full_name ?? row.full_display_name ?? fallback.fullName,
         specialty: row.doctor_specializations?.[0]?.specialization_name ?? fallback.specialization,
-        rating: Number(row.rating_avg ?? 4.7),
-        reviews: Number(row.rating_count ?? 85),
+        rating: Number(row.rating_avg ?? fallback.rating),
+        reviews: Number(row.rating_count ?? fallback.reviews),
         distance: fallback.distance,
         eta: fallback.eta,
         fee: Number(row.consultation_fee_inr ?? fallback.fee),
@@ -383,8 +319,8 @@ export default function TeleConsultation() {
             listKey: `${doctor.handle}-${index}`,
             name: doctor.fullName,
             specialty: doctor.specialization,
-            rating: 4.8,
-            reviews: 85,
+            rating: doctor.rating,
+            reviews: doctor.reviews,
             distance: doctor.distance,
             eta: doctor.eta,
             fee: doctor.fee,
@@ -536,13 +472,21 @@ export default function TeleConsultation() {
   }, [selectedDoctor, visibleDoctors])
 
   useEffect(() => {
-    if (!prepaidConsultActive || !incomingState?.featuredDoctor?.name || doctors.length === 0 || selectedDoctor) return
+    if (!prepaidConsultActive || !incomingState?.featuredDoctor?.name || doctors.length === 0) return
     const target = incomingState.featuredDoctor.name.toLowerCase()
     const byName = doctors.find((doctor) => doctor.name.toLowerCase().includes(target))
-    if (byName) {
+    if (byName && (!selectedDoctor || autoStartPaidConsultRef.current)) {
       setSelectedDoctor(byName.id)
     }
   }, [doctors, incomingState, prepaidConsultActive, selectedDoctor])
+
+  useEffect(() => {
+    if (!prepaidConsultActive || !autoStartPaidConsultRef.current || !selectedDoctorInfo || isBookingNow) return
+    autoStartPaidConsultRef.current = false
+    setMode("tele")
+    setStep("options")
+    void continueJourney(selectedDoctorInfo)
+  }, [isBookingNow, prepaidConsultActive, selectedDoctorInfo])
 
   useEffect(() => {
     if (!selectedDoctorInfo) return
@@ -744,12 +688,16 @@ export default function TeleConsultation() {
     return created.sessionId
   }
 
-  async function continueJourney() {
-    if (!selectedDoctorInfo) return
-    if (selectedDoctorRequiresPayment) {
+  async function continueJourney(doctorOverride?: Doctor) {
+    const activeDoctor = doctorOverride ?? selectedDoctorInfo
+    if (!activeDoctor) return
+    const activeDoctorIsFree = isDoctorFreeForCurrentFlow(activeDoctor, mode, teleOfferActive)
+    const activeDoctorRequiresPayment = !prepaidConsultActive && !activeDoctorIsFree && activeDoctor.fee > 0
+    if (doctorOverride && selectedDoctor !== doctorOverride.id) setSelectedDoctor(doctorOverride.id)
+    if (activeDoctorRequiresPayment) {
       navigate("/teleconsultation/schedule", {
         state: {
-          doctor: selectedDoctorInfo,
+          doctor: activeDoctor,
           mode,
           analysisQuery,
           selectedSymptoms,
@@ -767,7 +715,7 @@ export default function TeleConsultation() {
         const now = new Date()
         const start = new Date(now.getTime())
         const end = new Date(start.getTime() + consultDurationMinutes * 60 * 1000)
-        const actors = await ensureTeleconsultActors(selectedDoctorInfo)
+        const actors = await ensureTeleconsultActors(activeDoctor)
         const appointment = await createAppointment({
           companyId: actors.employee.companyId,
           employeeId: actors.employee.employeeUserId,
@@ -780,7 +728,7 @@ export default function TeleConsultation() {
           meetingJoinWindowStart: new Date(start.getTime()).toISOString(),
           meetingJoinWindowEnd: end.toISOString(),
           status: "confirmed",
-          reason: analysisQuery || selectedDoctorInfo.specialty,
+          reason: analysisQuery || activeDoctor.specialty,
           patientSummary: selectedSymptoms.join(", "),
           symptomSnapshot: { selectedSymptoms },
           aiTriageSummary: analysisQuery || undefined,
@@ -788,7 +736,7 @@ export default function TeleConsultation() {
         if (prepaidConsultActive) {
           await consumeTeleconsultPaidAccess({
             appointmentId: appointment.appointmentId,
-            doctorId: selectedDoctorInfo.id,
+            doctorId: activeDoctor.id,
             feelingId: incomingState?.paidAccessFeelingId ?? null,
           }).catch(() => undefined)
         }
@@ -804,10 +752,10 @@ export default function TeleConsultation() {
         booking = {
           id: appointment.appointmentId,
           sessionId: created.sessionId,
-          doctorId: selectedDoctorInfo.id,
-          doctorName: selectedDoctorInfo.name,
-          specialty: selectedDoctorInfo.specialty,
-          doctorAvatar: selectedDoctorInfo.avatar,
+          doctorId: activeDoctor.id,
+          doctorName: activeDoctor.name,
+          specialty: activeDoctor.specialty,
+          doctorAvatar: activeDoctor.avatar,
           status: "confirmed",
           scheduledAt: start.toISOString(),
           joinWindowStart: new Date(start.getTime()).toISOString(),
@@ -818,7 +766,7 @@ export default function TeleConsultation() {
         localStorage.setItem(TELE_BOOKINGS_KEY, JSON.stringify([booking, ...existing].slice(0, 20)))
         await addNotification({
           title: "Teleconsultation booked",
-          body: `Your call with ${selectedDoctorInfo.name} is booked. Join will open 1 minute before time.`,
+          body: `Your call with ${activeDoctor.name} is booked. Join will open 1 minute before time.`,
           channel: "consult",
           cta: { label: "Join Call", route: `/teleconsultation/overview/${booking.id}` },
           joinWindowStart: booking.joinWindowStart,
@@ -837,6 +785,17 @@ export default function TeleConsultation() {
         setIsBookingNow(false)
       }
       if (booking) {
+        if (prepaidConsultActive && incomingState?.autoJoin) {
+          setBookingId(booking.id)
+          setTeleconsultSessionId(booking.sessionId)
+          setScheduledAt(booking.scheduledAt)
+          setStep("video")
+          setCallState("ready")
+          setCallError("")
+          setMediaError("")
+          setAutoJoin(true)
+          return
+        }
         navigate("/teleconsultation/confirm", { state: { booking } })
       } else if (!bookingFailed) {
         setBookingError("Booking did not complete. Please try again.")
@@ -844,7 +803,7 @@ export default function TeleConsultation() {
       return
     }
     try {
-      const actors = await ensureTeleconsultActors(selectedDoctorInfo)
+      const actors = await ensureTeleconsultActors(activeDoctor)
       const now = new Date()
       const appointment = await createAppointment({
         companyId: actors.employee.companyId,
@@ -856,7 +815,7 @@ export default function TeleConsultation() {
         scheduledStart: now.toISOString(),
         scheduledEnd: new Date(now.getTime() + consultDurationMinutes * 60 * 1000).toISOString(),
         status: "confirmed",
-        reason: analysisQuery || selectedDoctorInfo.specialty,
+        reason: analysisQuery || activeDoctor.specialty,
         patientSummary: selectedSymptoms.join(", "),
         symptomSnapshot: { selectedSymptoms },
         aiTriageSummary: analysisQuery || undefined,
@@ -866,10 +825,10 @@ export default function TeleConsultation() {
           booking: {
             id: appointment.appointmentId,
             sessionId: "",
-            doctorId: selectedDoctorInfo.id,
-            doctorName: selectedDoctorInfo.name,
-            specialty: selectedDoctorInfo.specialty,
-            doctorAvatar: selectedDoctorInfo.avatar,
+            doctorId: activeDoctor.id,
+            doctorName: activeDoctor.name,
+            specialty: activeDoctor.specialty,
+            doctorAvatar: activeDoctor.avatar,
             status: "confirmed",
             scheduledAt: now.toISOString(),
             joinWindowStart: now.toISOString(),
@@ -877,7 +836,7 @@ export default function TeleConsultation() {
             mode: "opd",
           },
           nextPickup: true,
-          doctor: selectedDoctorInfo,
+          doctor: activeDoctor,
           analysisQuery,
           selectedSymptoms,
         },
@@ -886,7 +845,7 @@ export default function TeleConsultation() {
     } catch {
       // Keep OPD journey resilient even if appointment persistence is unavailable.
     }
-    navigate("/teleconsultation/pickup", { state: { doctor: selectedDoctorInfo, analysisQuery, selectedSymptoms } })
+    navigate("/teleconsultation/pickup", { state: { doctor: activeDoctor, analysisQuery, selectedSymptoms } })
   }
 
   function teardownRealtimeCall() {
@@ -1091,7 +1050,7 @@ export default function TeleConsultation() {
               >
                 <FiVideo />
                 <h3>Teleconsultation</h3>
-                <p>Online doctor appointment</p>
+
               </button>
 
               <button
@@ -1101,7 +1060,7 @@ export default function TeleConsultation() {
               >
                 <FiMapPin />
                 <h3>OPD Visit</h3>
-                <p>Hospital visit booking</p>
+
               </button>
             </section>
 
@@ -1110,8 +1069,9 @@ export default function TeleConsultation() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search doctors or specialties.."
+                placeholder="Search doctors or specialties..."
               />
+              <button type="button" className="tele-filter-btn app-pressable" aria-label="Filter doctors"><FiFilter /></button>
             </section>
 
             <section className="specialty-row app-fade-stagger">
@@ -1133,98 +1093,12 @@ export default function TeleConsultation() {
                 <h3>Available doctors</h3>
                 <p>{mode === "tele" ? "Choose a doctor for video consultation or schedule a later appointment." : "Choose a doctor for OPD visit booking."}</p>
               </div>
-              {selectedDoctorInfo ? (
-                <article className="selected-doctor-panel">
-                  <div className="selected-doctor-top">
-                    <div className="selected-doctor-avatar">
-                      <span className="doctor-avatar-fallback" aria-hidden="true"><FiUser /></span>
-                      <img
-                        src={selectedDoctorInfo.avatar}
-                        alt={selectedDoctorInfo.name}
-                        loading="lazy"
-                        onError={(event) => handleDoctorAvatarError(event, selectedDoctorInfo.fallbackAvatar)}
-                      />
-                    </div>
-                    <div className="selected-doctor-copy">
-                      <span className="selected-doctor-pill">Selected doctor</span>
-                      <h4>{selectedDoctorInfo.name}</h4>
-                      <p>{selectedDoctorInfo.specialty}</p>
-                    </div>
-                    <div className="selected-doctor-rating">
-                      <FiStar />
-                      <strong>{selectedDoctorInfo.rating.toFixed(1)}</strong>
-                    </div>
-                  </div>
-                  <div className="selected-doctor-grid">
-                    <div className="selected-doctor-fee-card">
-                      <span>Consult fee</span>
-                      <strong>{prepaidConsultActive ? "Included in ₹49 pass" : teleOfferActive && mode === "tele" && selectedDoctorInfo.specialty === "Internal Medicine" ? "Free" : `₹${selectedDoctorInfo.fee}`}</strong>
-                    </div>
-                    <div>
-                      <span>{mode === "tele" ? "Priority" : "Visit type"}</span>
-                      <strong>{prepaidConsultActive ? `${consultDurationMinutes} min paid consult` : teleOfferActive && mode === "tele" && selectedDoctorInfo.specialty === "Internal Medicine" ? "Unlimited GP" : mode === "tele" ? "Video consult" : "Clinic visit"}</strong>
-                    </div>
-                    <div>
-                      <span>Reviews</span>
-                      <strong>{selectedDoctorInfo.reviews} trusted</strong>
-                    </div>
-                    <div>
-                      <span>Mode</span>
-                      <strong>{mode === "tele" ? "Video call" : "OPD visit"}</strong>
-                    </div>
-                  </div>
-                  <div className="selected-doctor-actions">
-                    <button
-                      className="selected-secondary app-pressable"
-                      type="button"
-                      disabled={isBookingNow}
-                      onClick={() =>
-                        navigate("/teleconsultation/schedule", {
-                          state: {
-                            doctor: selectedDoctorInfo,
-                            mode,
-                            analysisQuery,
-                            selectedSymptoms,
-                          },
-                        })
-                      }
-                    >
-                      <FiCalendar />
-                      Schedule Slot
-                    </button>
-                    <button className="selected-primary app-pressable" type="button" onClick={continueJourney} disabled={isBookingNow}>
-                      {isBookingNow ? (
-                        <span className="book-btn-loading">
-                          <span className="book-btn-spinner" aria-hidden="true" />
-                          Processing...
-                        </span>
-                      ) : (
-                        <>
-                          <FiCheckCircle />
-                          {selectedDoctorRequiresPayment
-                            ? mode === "tele"
-                              ? "Continue to Payment"
-                              : "Continue to Schedule"
-                            : prepaidConsultActive
-                              ? `Use ${consultDurationMinutes} Min Consult`
-                            : mode === "tele"
-                              ? "Book Instant Call"
-                              : "Continue to Pickup"}
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </article>
-              ) : null}
               <div className={`doctor-list ${showDoctors ? "ready" : ""}`}>
                 {visibleDoctors.map((doctor, index) => (
-                  <button
-                    key={`doc-${index}`}
+                  <article
+                    key={doctor.listKey || `doc-${index}`}
                     className={`doctor-card app-pressable ${selectedDoctor === doctor.id ? "selected" : ""}`}
-                    onClick={() => {
-                      setSelectedDoctor(doctor.id)
-                    }}
-                    type="button"
+                    onClick={() => setSelectedDoctor(doctor.id)}
                   >
                     <div className="doctor-avatar">
                       <span className="doctor-avatar-fallback" aria-hidden="true"><FiUser /></span>
@@ -1236,30 +1110,46 @@ export default function TeleConsultation() {
                       />
                     </div>
                     <div className="doctor-main">
+                      {selectedDoctor === doctor.id ? <span className="doctor-selected-pill">Selected</span> : null}
                       <h4>{doctor.name}</h4>
                       <p>{doctor.specialty}</p>
                       <div className="doctor-rating-block">
-                        <span className="doctor-rating"><FiStar /> {doctor.rating.toFixed(1)}</span>
-                        <span className="doctor-reviews">{doctor.reviews} Reviews</span>
-                      </div>
-                      <div className="doctor-fee-row">
-                        <span>Consult fee</span>
-                        <strong>{prepaidConsultActive ? "Included" : teleOfferActive && mode === "tele" && doctor.specialty === "Internal Medicine" ? "Free" : `₹${doctor.fee}`}</strong>
+                        <span className="doctor-rating"><FiStar /> {doctor.rating.toFixed(1)} ({doctor.reviews})</span>
+                        <span className="doctor-reviews"><FiVideo /> {mode === "tele" ? "Video Consult" : "OPD Visit"}</span>
                       </div>
                     </div>
-                    <div className="doctor-time-badge">
-                      {prepaidConsultActive
-                        ? `${consultDurationMinutes} min paid`
-                        : teleOfferActive && mode === "tele" && doctor.specialty === "Internal Medicine"
-                        ? "GP Priority"
-                        : mode === "tele"
-                          ? "Video consult"
-                          : "Clinic visit"}
+                    <div className="doctor-fee-side">
+                      <strong>{prepaidConsultActive ? "Included" : teleOfferActive && mode === "tele" && doctor.specialty === "Internal Medicine" ? "₹0" : `₹${doctor.fee}`}</strong>
+                      <span>Consult Fee</span>
                     </div>
-                    <div className="doctor-go" aria-hidden="true">
-                      <FiArrowUpRight />
+                    <div className="doctor-card-actions">
+                      <button
+                        className="doctor-schedule-btn app-pressable"
+                        type="button"
+                        disabled={isBookingNow}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setSelectedDoctor(doctor.id)
+                          navigate("/teleconsultation/schedule", {
+                            state: { doctor, mode, analysisQuery, selectedSymptoms },
+                          })
+                        }}
+                      >
+                        <FiCalendar /> Schedule
+                      </button>
+                      <button
+                        className="doctor-book-now-btn app-pressable"
+                        type="button"
+                        disabled={isBookingNow}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void continueJourney(doctor)
+                        }}
+                      >
+                        {isBookingNow && selectedDoctor === doctor.id ? "Booking..." : "Book Now"}
+                      </button>
                     </div>
-                  </button>
+                  </article>
                 ))}
                 {doctorLoading && (
                   <div className="doctor-loading">Loading more doctors...</div>
@@ -1480,47 +1370,14 @@ export default function TeleConsultation() {
 
       {effectiveStep === "options" && (
         <footer className="tele-footer app-fade-stagger">
-          {selectedDoctorInfo && (
-            <div className="book-actions">
-              <button
-                className="book-later-btn app-pressable"
-                type="button"
-                disabled={isBookingNow}
-                onClick={() =>
-                  navigate("/teleconsultation/schedule", {
-                    state: {
-                      doctor: selectedDoctorInfo,
-                      mode,
-                      analysisQuery,
-                      selectedSymptoms,
-                    },
-                  })
-                }
-              >
-                Schedule
-              </button>
-                <button className="book-btn app-pressable" type="button" onClick={continueJourney} disabled={isBookingNow}>
-                  {isBookingNow ? (
-                    <span className="book-btn-loading">
-                      <span className="book-btn-spinner" aria-hidden="true" />
-                      Processing booking...
-                    </span>
-                  ) : (
-                    selectedDoctorRequiresPayment
-                      ? mode === "tele"
-                        ? "Continue to Payment"
-                        : "Continue to Schedule"
-                      : prepaidConsultActive
-                        ? `Use ${consultDurationMinutes} Min Consult`
-                      : "Book Now"
-                  )}
-                </button>
-              </div>
+          {selectedDoctorInfo ? (
+            <button className="book-btn app-pressable" type="button" onClick={() => void continueJourney()} disabled={isBookingNow}>
+              <FiCalendar /> {isBookingNow ? "Processing booking..." : "Book Appointment"}
+            </button>
+          ) : (
+            <p className="tele-hint">Select any doctor card to book appointment.</p>
           )}
           {bookingError && <p className="tele-booking-error">{bookingError}</p>}
-          {!selectedDoctorInfo && (
-            <p className="tele-hint">Select any doctor card to review visit details and book.</p>
-          )}
         </footer>
       )}
 
