@@ -52,7 +52,6 @@ workflows:
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
-        DERIVED_DATA_PATH: "$CM_BUILD_DIR/build/ios-simulator"
     scripts:
       - name: Validate project root
         script: |
@@ -61,6 +60,7 @@ workflows:
           test -f package.json || (echo "package.json missing. In Codemagic, select the repository root that contains package.json and codemagic.yaml." && exit 1)
           test -f capacitor.config.ts || (echo "capacitor.config.ts missing. Push the full Capacitor project root." && exit 1)
           test -d ios/App || (echo "ios/App missing. Push the native iOS project too." && exit 1)
+          test -f ios/App/App.xcodeproj/project.pbxproj || (echo "Xcode project missing." && exit 1)
       - name: Install JS dependencies
         script: |
           npm config set registry https://registry.npmjs.org/
@@ -73,33 +73,45 @@ workflows:
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
-      - name: Build unsigned iOS Simulator app for Codemagic App Preview
+      - name: Clean old Xcode build products
         script: |
+          rm -rf "$HOME/Library/Developer/Xcode/DerivedData"/*
+      - name: Show available iOS simulator destinations
+        script: |
+          xcodebuild -showdestinations \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" || true
+      - name: Build unsigned iOS Simulator .app for Codemagic Quick Launch
+        script: |
+          set -euo pipefail
           xcodebuild build \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
-            -configuration Debug \
             -sdk iphonesimulator \
+            -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$DERIVED_DATA_PATH" \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
-      - name: Export simulator app
+            CODE_SIGNING_ALLOWED=NO \
+            | tee /tmp/xcodebuild-ios-simulator.log
+      - name: Verify simulator .app artifact
         script: |
-          mkdir -p "$CM_EXPORT_DIR"
-          APP_PATH=$(find "$DERIVED_DATA_PATH/Build/Products/Debug-iphonesimulator" -name "*.app" -maxdepth 2 -print -quit)
-          if [ -z "$APP_PATH" ]; then
-            echo "No simulator .app was produced."
-            find "$DERIVED_DATA_PATH/Build/Products" -maxdepth 4 -type d -name "*.app" -print || true
+          set -euo pipefail
+          APP_PATH=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path "*/Build/Products/Debug-iphonesimulator/*.app" -maxdepth 8 -print -quit)
+          if [ -z "${APP_PATH:-}" ]; then
+            echo "No Debug-iphonesimulator .app was produced. Quick Launch cannot appear."
+            find "$HOME/Library/Developer/Xcode/DerivedData" -maxdepth 8 -type d -name "*.app" -print || true
             exit 1
           fi
-          cp -R "$APP_PATH" "$CM_EXPORT_DIR/Astikan-iOS-Simulator.app"
-          ls -lah "$CM_EXPORT_DIR"
+          echo "Simulator app found: $APP_PATH"
+          echo "Artifact must be shown by Codemagic as a .app, not .ipa and not .zip."
+          EXECUTABLE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Info.plist")
+          file "$APP_PATH/$EXECUTABLE_NAME" || true
+          lipo -info "$APP_PATH/$EXECUTABLE_NAME" || true
+          du -sh "$APP_PATH"
     artifacts:
-      - $CM_EXPORT_DIR/*.app
-      - build/ios-simulator/Build/Products/Debug-iphonesimulator/*.app
-      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphonesimulator/*.app
+      - /tmp/xcodebuild-ios-simulator.log
 
   astikan-web-build-artifact:
     name: Astikan Web Build Artifact
