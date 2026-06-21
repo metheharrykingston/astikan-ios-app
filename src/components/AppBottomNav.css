@@ -5,15 +5,17 @@
   transform: translateX(-50%);
   z-index: 90;
   width: min(calc(100% - 24px), calc(var(--app-frame-width, 430px) - 24px));
-  min-height: 72px;
-  padding: 10px 8px 8px;
+  min-height: 78px;
+  padding: 14px 10px 10px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
+  gap: 4px;
   border: 1px solid rgba(202, 211, 226, 0.9);
-  border-radius: 22px;
+  border-radius: 26px;
   background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+  box-shadow:
+    0 18px 46px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(18px);
   overflow: visible;
 }
@@ -21,27 +23,27 @@
   position: relative;
   border: 0;
   border-radius: 16px;
-  min-height: 50px;
-  padding: 5px 2px;
+  min-height: 54px;
+  padding: 8px 2px 6px;
   background: transparent;
   color: #64748b;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 3px;
-  font-size: 0.65rem;
+  gap: 4px;
+  font-size: 0.62rem;
   font-weight: 900;
   line-height: 1;
 }
-.ast-bottom-nav__item.shift-right {
-  transform: translateX(28px);
-}
+.ast-bottom-nav__item:nth-child(2) { margin-right: 12px; }
+.ast-bottom-nav__item:nth-child(4) { margin-left: 12px; }
+.ast-bottom-nav__item.center-anchor { padding-top: 16px; }
 .ast-bottom-nav__item.active { color: #0b66f6; background: linear-gradient(180deg, #edf6ff, #eef4ff); box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.16); }
 .ast-bottom-nav__charge {
   position: absolute;
   left: 50%;
   top: 0;
-  transform: translate(-50%, -48%);
+  transform: translate(-50%, -46%);
   border: 0;
   background: transparent;
   display: grid;
@@ -50,21 +52,28 @@
   z-index: 2;
 }
 .ast-bottom-nav__charge-core {
-  width: 56px;
-  height: 56px;
+  width: 66px;
+  height: 66px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(180deg, #18c59e, #0f9f8d);
-  box-shadow: 0 16px 32px rgba(15, 159, 141, 0.35);
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255,255,255,0.32), transparent 34%),
+    linear-gradient(180deg, #21d4af 0%, #11b29a 54%, #0d8c7f 100%);
+  border: 4px solid rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 20px 38px rgba(15, 159, 141, 0.36),
+    0 8px 16px rgba(15, 23, 42, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 .ast-bottom-nav__charge-core svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 1px 1px rgba(7, 20, 49, 0.18));
 }
 .ast-bottom-nav__icon { position: relative; display: grid; place-items: center; min-height: 25px; }
-.ast-bottom-nav__icon svg { width: 19px; height: 19px; }
+.ast-bottom-nav__icon svg { width: 18px; height: 18px; }
 .ast-bottom-nav__icon em {
   position: absolute; top: -11px; right: -20px; min-width: 34px; height: 18px; padding: 0 6px;
   border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
@@ -74,9 +83,13 @@
 }
 @keyframes ast-offer-shine { 0%,100%{transform:translateY(0) scale(1);filter:brightness(1)} 50%{transform:translateY(-1px) scale(1.06);filter:brightness(1.18)} }
 @media (max-width: 360px) {
-  .ast-bottom-nav { width:min(calc(100% - 14px), calc(var(--app-frame-width, 430px) - 14px)); padding:8px 6px 6px; gap:2px; }
-  .ast-bottom-nav__item { font-size:.55rem; border-radius:14px; }
-  .ast-bottom-nav__item.shift-right { transform: translateX(24px); }
-  .ast-bottom-nav__charge-core { width: 50px; height: 50px; }
+  .ast-bottom-nav { width:min(calc(100% - 14px), calc(var(--app-frame-width, 430px) - 14px)); padding:12px 6px 8px; gap:2px; }
+  .ast-bottom-nav__item { font-size:.54rem; border-radius:14px; min-height: 50px; }
+  .ast-bottom-nav__item:nth-child(2) { margin-right: 8px; }
+  .ast-bottom-nav__item:nth-child(4) { margin-left: 8px; }
+  .ast-bottom-nav__item.center-anchor { padding-top: 14px; }
+  .ast-bottom-nav__charge { transform: translate(-50%, -40%); }
+  .ast-bottom-nav__charge-core { width: 58px; height: 58px; border-width: 3px; }
+  .ast-bottom-nav__charge-core svg { width: 22px; height: 22px; }
   .ast-bottom-nav__icon em { right:-17px; min-width:30px; font-size:.56rem; }
 }

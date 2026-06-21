@@ -1,6 +1,129 @@
 workflows:
+  astikan-android-preview-apk:
+    name: Astikan Android Preview APK
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      node: 22
+      java: 21
+    scripts:
+      - name: Validate project root
+        script: |
+          pwd
+          ls -la
+          test -f package.json || (echo "package.json missing. In Codemagic, select the repository root that contains package.json and codemagic.yaml." && exit 1)
+          test -f capacitor.config.ts || (echo "capacitor.config.ts missing. Push the full Capacitor project root." && exit 1)
+          test -d android/app || (echo "android/app missing. Push the native Android project too." && exit 1)
+      - name: Install JS dependencies
+        script: |
+          npm config set registry https://registry.npmjs.org/
+          npm config delete proxy || true
+          npm config delete https-proxy || true
+          npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
+      - name: Build Vite web app
+        script: |
+          npm run build
+      - name: Sync Capacitor Android
+        script: |
+          npx cap sync android
+      - name: Build Android debug APK for Codemagic App Preview
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          cd android
+          chmod +x ./gradlew
+          ./gradlew clean assembleDebug --no-daemon --stacktrace
+      - name: Export preview APK
+        script: |
+          mkdir -p "$CM_EXPORT_DIR"
+          cp android/app/build/outputs/apk/debug/*.apk "$CM_EXPORT_DIR/" || true
+          ls -lah "$CM_EXPORT_DIR"
+    artifacts:
+      - $CM_EXPORT_DIR/*.apk
+      - android/app/build/outputs/apk/debug/*.apk
+      - /tmp/gradle_logs/*.log
+
+  astikan-ios-simulator-preview:
+    name: Astikan iOS Simulator Preview
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      node: 22
+      xcode: latest
+      vars:
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+        DERIVED_DATA_PATH: "$CM_BUILD_DIR/build/ios-simulator"
+    scripts:
+      - name: Validate project root
+        script: |
+          pwd
+          ls -la
+          test -f package.json || (echo "package.json missing. In Codemagic, select the repository root that contains package.json and codemagic.yaml." && exit 1)
+          test -f capacitor.config.ts || (echo "capacitor.config.ts missing. Push the full Capacitor project root." && exit 1)
+          test -d ios/App || (echo "ios/App missing. Push the native iOS project too." && exit 1)
+      - name: Install JS dependencies
+        script: |
+          npm config set registry https://registry.npmjs.org/
+          npm config delete proxy || true
+          npm config delete https-proxy || true
+          npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
+      - name: Build Vite web app
+        script: |
+          npm run build
+      - name: Sync Capacitor iOS
+        script: |
+          npx cap sync ios
+      - name: Build unsigned iOS Simulator app for Codemagic App Preview
+        script: |
+          xcodebuild build \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      - name: Export simulator app
+        script: |
+          mkdir -p "$CM_EXPORT_DIR"
+          APP_PATH=$(find "$DERIVED_DATA_PATH/Build/Products/Debug-iphonesimulator" -name "*.app" -maxdepth 2 -print -quit)
+          if [ -z "$APP_PATH" ]; then
+            echo "No simulator .app was produced."
+            find "$DERIVED_DATA_PATH/Build/Products" -maxdepth 4 -type d -name "*.app" -print || true
+            exit 1
+          fi
+          cp -R "$APP_PATH" "$CM_EXPORT_DIR/Astikan-iOS-Simulator.app"
+          ls -lah "$CM_EXPORT_DIR"
+    artifacts:
+      - $CM_EXPORT_DIR/*.app
+      - build/ios-simulator/Build/Products/Debug-iphonesimulator/*.app
+      - /tmp/xcodebuild_logs/*.log
+
+  astikan-web-build-artifact:
+    name: Astikan Web Build Artifact
+    instance_type: linux_x2
+    max_build_duration: 30
+    environment:
+      node: 22
+    scripts:
+      - name: Install JS dependencies
+        script: |
+          npm config set registry https://registry.npmjs.org/
+          npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
+      - name: Build web app
+        script: |
+          npm run build
+      - name: Export web build zip
+        script: |
+          mkdir -p "$CM_EXPORT_DIR"
+          zip -r "$CM_EXPORT_DIR/astikan-web-dist.zip" dist
+    artifacts:
+      - $CM_EXPORT_DIR/astikan-web-dist.zip
+
   astikan-ios-build-check:
-    name: Astikan iOS Build Check
+    name: Astikan iOS Device Build Check
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
@@ -10,7 +133,7 @@ workflows:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
     scripts:
-      - name: Show project structure
+      - name: Validate project root
         script: |
           pwd
           ls -la
@@ -29,12 +152,11 @@ workflows:
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
-      - name: Build iOS app without signing
+      - name: Build iOS device app without signing
         script: |
-          cd ios/App
           xcodebuild \
-            -project App.xcodeproj \
-            -scheme App \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
             -configuration Debug \
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO \

@@ -34,7 +34,7 @@ export default function AppBottomNav({ active }: { active?: AppBottomNavKey }) {
         <button
           key={item.id}
           type="button"
-          className={`ast-bottom-nav__item app-pressable ${active === item.id ? "active" : ""} ${item.badge ? "has-offer" : ""} ${index >= 2 ? "shift-right" : ""}`}
+          className={`ast-bottom-nav__item app-pressable ${active === item.id ? "active" : ""} ${item.badge ? "has-offer" : ""} ${index === 2 ? "center-anchor" : ""}`}
           onClick={() => navigate(item.route)}
         >
           <span className="ast-bottom-nav__icon">
