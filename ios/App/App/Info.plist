@@ -29,14 +29,14 @@
 			<string>com.astikan.healthcare</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.201357365434-8pu8ip0mo8jgam2qunheakialdfmschh</string>
+				<string>com.googleusercontent.apps.201357365434-7lav4l8jve7dkpeh761jsjuac2a4do2u</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>GIDClientID</key>
-	<string>201357365434-8pu8ip0mo8jgam2qunheakialdfmschh.apps.googleusercontent.com</string>
+	<string>201357365434-7lav4l8jve7dkpeh761jsjuac2a4do2u.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>

@@ -1034,7 +1034,7 @@ export default function TeleConsultation() {
             <FiArrowLeft />
           </button>
           <div>
-            <h1>Book Appointment</h1>
+            <h1>Doctor</h1>
           </div>
         </header>
       )}
@@ -1372,10 +1372,10 @@ export default function TeleConsultation() {
         <footer className="tele-footer app-fade-stagger">
           {selectedDoctorInfo ? (
             <button className="book-btn app-pressable" type="button" onClick={() => void continueJourney()} disabled={isBookingNow}>
-              <FiCalendar /> {isBookingNow ? "Processing booking..." : "Book Appointment"}
+              <FiCalendar /> {isBookingNow ? "Processing..." : "Continue"}
             </button>
           ) : (
-            <p className="tele-hint">Select any doctor card to book appointment.</p>
+            <p className="tele-hint">Select a doctor to continue.</p>
           )}
           {bookingError && <p className="tele-booking-error">{bookingError}</p>}
         </footer>

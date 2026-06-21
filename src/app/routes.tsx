@@ -28,6 +28,10 @@ import OpdPickup from "../pages/TeleConsultation/pickup"
 import TeleSchedule from "../pages/TeleConsultation/schedule"
 import TeleConfirm from "../pages/TeleConsultation/confirm"
 import TeleOverview from "../pages/TeleConsultation/overview"
+import NearbyDoctors from "../pages/NearbyDoctors"
+import NearbyDoctorConsultType from "../pages/NearbyDoctors/consult"
+import NearbyDoctorRequest from "../pages/NearbyDoctors/request"
+import NearbyDoctorSuccess from "../pages/NearbyDoctors/success"
 import AISymptomAnalyser from "../pages/AISymptomAnalyser"
 import Pharmacy from "../pages/Pharmacy"
 import PharmacyCategories from "../pages/PharmacyCategories"
@@ -91,6 +95,10 @@ export const router = createBrowserRouter([
       { path: "teleconsultation/schedule", element: <TeleSchedule /> },
       { path: "teleconsultation/confirm", element: <TeleConfirm /> },
       { path: "teleconsultation/overview/:id", element: <TeleOverview /> },
+      { path: "nearby-doctors", element: <NearbyDoctors /> },
+      { path: "nearby-doctors/consult", element: <NearbyDoctorConsultType /> },
+      { path: "nearby-doctors/request", element: <NearbyDoctorRequest /> },
+      { path: "nearby-doctors/success", element: <NearbyDoctorSuccess /> },
       { path: "ai-symptom-analyser", element: <AISymptomAnalyser /> },
       { path: "pharmacy", element: <Pharmacy /> },
       { path: "pharmacy/categories", element: <PharmacyCategories /> },
@@ -109,10 +117,15 @@ export const router = createBrowserRouter([
       { path: "wallet", element: <Wallet /> },
       { path: "notifications", element: <Notifications /> },
       { path: "surgeries", element: <SurgeryList /> },
+      { path: "treatments", element: <SurgeryList /> },
       { path: "surgeries/booking-success", element: <SurgerySuccess /> },
+      { path: "treatments/booking-success", element: <SurgerySuccess /> },
       { path: "surgeries/:surgeryId/book", element: <SurgeryBook /> },
+      { path: "treatments/:surgeryId/book", element: <SurgeryBook /> },
       { path: "surgeries/:surgeryId/confirm", element: <SurgeryConfirm /> },
+      { path: "treatments/:surgeryId/confirm", element: <SurgeryConfirm /> },
       { path: "surgeries/:surgeryId", element: <SurgeryDetail /> },
+      { path: "treatments/:surgeryId", element: <SurgeryDetail /> },
       { path: "hospitals", element: <SurgeryList /> },
       { path: "hospitals/:surgeryId", element: <SurgeryDetail /> },
       { path: "medical-finance", element: <MedicalFinanceForm /> },

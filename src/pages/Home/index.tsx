@@ -43,16 +43,16 @@ const quickAccess: QuickAccessItem[] = [
   { title: "Lab Test", subtitle: "Fast slots", tone: "blue", icon: "lab" },
   { title: "Doctor", subtitle: "OPD / IPD", tone: "indigo", icon: "consult" },
   { title: "Medicines", subtitle: "Meds refill", tone: "green", icon: "pharmacy" },
-  { title: "Surgery", subtitle: "Packages", tone: "blue", icon: "surgery" },
+  { title: "Treatments", subtitle: "Surgery & care", tone: "blue", icon: "surgery" },
   { title: "Finance", subtitle: "Medical loan", tone: "gold", icon: "finance" },
 ]
 
 const quickAccessRoutes: Partial<Record<QuickAccessItem["title"], string>> = {
   Insurance: "/insurance",
   "Lab Test": "/lab-tests",
-  Doctor: "/teleconsultation",
+  Doctor: "/nearby-doctors",
   Medicines: "/pharmacy",
-  Surgery: "/surgeries",
+  Treatments: "/surgeries",
   Finance: "/medical-finance",
 }
 
@@ -319,7 +319,7 @@ export default function Home() {
   const [teleAnswers, setTeleAnswers] = useState<Record<string, string[]>>({})
   const [teleUnlocking, setTeleUnlocking] = useState(false)
   const [teleUnlockedMessage, setTeleUnlockedMessage] = useState("")
-  const [paidTeleconsultAccess, setPaidTeleconsultAccess] = useState<PaidTeleconsultAccessLocal>({
+  const [, setPaidTeleconsultAccess] = useState<PaidTeleconsultAccessLocal>({
     unlocked: false,
     availablePasses: 0,
     consultationMinutes: 15,
@@ -1075,7 +1075,6 @@ export default function Home() {
           doctor: feelingDoctorIntro[key],
           feelingId: key,
           theme: meta?.chatTheme ?? "whatsapp-dizzy",
-          paidUnlocked: paidTeleconsultAccess.availablePasses > 0,
         },
       })
       return

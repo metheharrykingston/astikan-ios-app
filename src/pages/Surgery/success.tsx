@@ -14,11 +14,11 @@ export default function SurgerySuccess() {
   if (!booking) {
     return (
       <main className="surgery-page app-page-enter">
-        <SurgeryHeader title="No confirmed booking" subtitle="Please book a surgery package again" />
+        <SurgeryHeader title="No confirmed booking" subtitle="Please request a treatment package again" />
         <section className="surgery-shell app-content-slide">
           <section className="surgery-form-card">
             <p>No surgery booking was found.</p>
-            <button className="surgery-primary-btn app-pressable" type="button" onClick={() => navigate('/surgeries')}>Find Surgeries</button>
+            <button className="surgery-primary-btn app-pressable" type="button" onClick={() => navigate('/surgeries')}>Browse Treatments</button>
           </section>
         </section>
       </main>
@@ -27,7 +27,7 @@ export default function SurgerySuccess() {
 
   return (
     <main className="surgery-page app-page-enter">
-      <SurgeryHeader title="Booking Confirmed" subtitle="Surgery consultation request created" />
+      <SurgeryHeader title="Booking Confirmed" subtitle="Treatment consultation request created" />
       <section className="surgery-shell app-content-slide">
         <section className="surgery-form-card app-fade-stagger">
           <div className="surgery-success-icon"><FiCheckCircle /></div>

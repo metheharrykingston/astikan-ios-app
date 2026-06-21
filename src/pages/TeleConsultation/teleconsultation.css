@@ -2203,3 +2203,55 @@
   .doctor-fee-side strong { font-size: 1rem !important; }
   .doctor-card-actions { grid-column: 1 / 4 !important; }
 }
+
+.nearby-doctor-entry {
+  margin-top: 12px;
+  border: 1px solid #cfe0ff;
+  border-radius: 20px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: linear-gradient(135deg, #f7fbff, #eef5ff);
+  box-shadow: 0 12px 28px rgba(30, 91, 190, 0.08);
+}
+
+.nearby-doctor-entry__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #075eea;
+  background: #fff;
+}
+
+.nearby-doctor-entry h3 {
+  margin: 0;
+  color: #10172d;
+  font-size: 16px;
+  font-family: "Satoshi", sans-serif;
+}
+
+.nearby-doctor-entry p {
+  margin: 4px 0 0;
+  color: #65718c;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.nearby-doctor-entry button {
+  border: 0;
+  border-radius: 999px;
+  min-height: 40px;
+  padding: 0 15px;
+  background: #075eea;
+  color: #fff;
+  font-weight: 900;
+}
+
+@media (max-width: 380px) {
+  .nearby-doctor-entry { grid-template-columns: auto 1fr; }
+  .nearby-doctor-entry button { grid-column: 1 / -1; width: 100%; }
+}

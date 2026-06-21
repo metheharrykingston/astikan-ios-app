@@ -5,7 +5,7 @@ import { analyzeMedicalAttachment, askAiChat, getAiLabReadinessQuestions, getAiT
 import { ensureEmployeeActor } from "../../services/actorsApi"
 import { getEmployeeAuthSession, getEmployeeCompanySession } from "../../services/authApi"
 import { addNotification } from "../../services/notificationCenter"
-import { getTeleconsultPaidAccessStatus, type TeleconsultPaidAccessStatus } from "../../services/teleconsultPaidApi"
+import { getTeleconsultPaidAccessStatus } from "../../services/teleconsultPaidApi"
 import { useProcessLoading } from "../../app/process-loading"
 import { getLabCatalog } from "../../services/labApi"
 import { fetchPharmacyProducts } from "../../services/pharmacyApi"
@@ -79,7 +79,6 @@ const defaultSuggestions = [
   "What tests should I consider first?",
   "Any urgent warning signs to watch?",
 ]
-const PAID_CONSULT_DURATION_MINUTES = 15
 const THREAD_STORAGE_KEY = "employee_ai_thread_id"
 const THREAD_LAST_KEY = "employee_ai_thread_id:last"
 const MESSAGE_STORAGE_PREFIX = "employee_ai_thread_messages:"
@@ -425,11 +424,6 @@ export default function AIChat() {
   const [lastSeenLabel, setLastSeenLabel] = useState("last seen recently")
   const [showProfilePreview, setShowProfilePreview] = useState(false)
   const [paidAccessUnlocked, setPaidAccessUnlocked] = useState(!requiresPaidAccess || (Boolean(navState?.paidUnlocked) && Boolean(initialSessionExpiresAt)))
-  const [paidStatus, setPaidStatus] = useState<TeleconsultPaidAccessStatus>({
-    unlocked: false,
-    availablePasses: 0,
-    consultationMinutes: PAID_CONSULT_DURATION_MINUTES,
-  })
   const [paidSessionExpiresAt, setPaidSessionExpiresAt] = useState(initialSessionExpiresAt)
   const [paidSessionRemainingSeconds, setPaidSessionRemainingSeconds] = useState(() => {
     if (!initialSessionExpiresAt) return 0
@@ -462,9 +456,8 @@ export default function AIChat() {
     }
     let active = true
     void getTeleconsultPaidAccessStatus()
-      .then((status) => {
+      .then(() => {
         if (!active) return
-        setPaidStatus(status)
         setPaidAccessUnlocked(Boolean(navState?.paidUnlocked) && Boolean(initialSessionExpiresAt))
       })
       .catch(() => {
@@ -601,18 +594,6 @@ export default function AIChat() {
         },
       },
     })
-  }
-
-  function startPaidDoctorSession(options?: { autoStartCall?: boolean; durationMinutes?: number }) {
-    const durationMinutes = Math.max(
-      5,
-      Number(options?.durationMinutes ?? paidStatus.consultationMinutes ?? navState?.sessionDurationMinutes ?? PAID_CONSULT_DURATION_MINUTES) ||
-        PAID_CONSULT_DURATION_MINUTES,
-    )
-    const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
-    autoStartPaidCallRef.current = Boolean(options?.autoStartCall)
-    setPaidSessionExpiresAt(expiresAt)
-    setPaidAccessUnlocked(true)
   }
 
   function markAssessmentDone(intent: AssessmentIntent) {
@@ -1313,10 +1294,6 @@ export default function AIChat() {
           className="ai-chat-call-btn app-pressable"
           onClick={async () => {
             if (paidFlowLocked) {
-              if (paidStatus.availablePasses > 0) {
-                startPaidDoctorSession({ autoStartCall: true, durationMinutes: paidStatus.consultationMinutes })
-                return
-              }
               openPaidConsultGate()
               return
             }
@@ -1446,10 +1423,6 @@ export default function AIChat() {
               onClick={async () => {
                 setShowProfilePreview(false)
                 if (paidFlowLocked) {
-                  if (paidStatus.availablePasses > 0) {
-                    startPaidDoctorSession({ autoStartCall: true, durationMinutes: paidStatus.consultationMinutes })
-                    return
-                  }
                   openPaidConsultGate()
                   return
                 }

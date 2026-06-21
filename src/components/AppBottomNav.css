@@ -5,8 +5,8 @@
   transform: translateX(-50%);
   z-index: 90;
   width: min(calc(100% - 24px), calc(var(--app-frame-width, 430px) - 24px));
-  min-height: 64px;
-  padding: 8px;
+  min-height: 72px;
+  padding: 10px 8px 8px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 5px;
@@ -15,6 +15,7 @@
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(18px);
+  overflow: visible;
 }
 .ast-bottom-nav__item {
   position: relative;
@@ -32,7 +33,36 @@
   font-weight: 900;
   line-height: 1;
 }
+.ast-bottom-nav__item.shift-right {
+  transform: translateX(28px);
+}
 .ast-bottom-nav__item.active { color: #0b66f6; background: linear-gradient(180deg, #edf6ff, #eef4ff); box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.16); }
+.ast-bottom-nav__charge {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -48%);
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  z-index: 2;
+}
+.ast-bottom-nav__charge-core {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: linear-gradient(180deg, #18c59e, #0f9f8d);
+  box-shadow: 0 16px 32px rgba(15, 159, 141, 0.35);
+}
+.ast-bottom-nav__charge-core svg {
+  width: 22px;
+  height: 22px;
+}
 .ast-bottom-nav__icon { position: relative; display: grid; place-items: center; min-height: 25px; }
 .ast-bottom-nav__icon svg { width: 19px; height: 19px; }
 .ast-bottom-nav__icon em {
@@ -43,4 +73,10 @@
   box-shadow: 0 7px 16px rgba(255, 45, 85, 0.34); animation: ast-offer-shine 1.45s ease-in-out infinite;
 }
 @keyframes ast-offer-shine { 0%,100%{transform:translateY(0) scale(1);filter:brightness(1)} 50%{transform:translateY(-1px) scale(1.06);filter:brightness(1.18)} }
-@media (max-width: 360px) { .ast-bottom-nav { width:min(calc(100% - 14px), calc(var(--app-frame-width, 430px) - 14px)); padding:6px; gap:3px; } .ast-bottom-nav__item { font-size:.58rem; border-radius:14px; } .ast-bottom-nav__icon em { right:-17px; min-width:30px; font-size:.56rem; } }
+@media (max-width: 360px) {
+  .ast-bottom-nav { width:min(calc(100% - 14px), calc(var(--app-frame-width, 430px) - 14px)); padding:8px 6px 6px; gap:2px; }
+  .ast-bottom-nav__item { font-size:.55rem; border-radius:14px; }
+  .ast-bottom-nav__item.shift-right { transform: translateX(24px); }
+  .ast-bottom-nav__charge-core { width: 50px; height: 50px; }
+  .ast-bottom-nav__icon em { right:-17px; min-width:30px; font-size:.56rem; }
+}

@@ -32,7 +32,7 @@ export default function SurgeryConfirm() {
   if (!booking) {
     return (
       <main className="surgery-page app-page-enter">
-        <SurgeryHeader title="Booking not ready" subtitle="Please select a surgery package first" />
+        <SurgeryHeader title="Booking not ready" subtitle="Please select a treatment package first" />
         <section className="surgery-shell app-content-slide">
           <section className="surgery-form-card">
             <p className="surgery-summary-line"><span><FiAlertCircle /> Missing booking details.</span></p>
@@ -73,7 +73,7 @@ export default function SurgeryConfirm() {
 
         <section className="surgery-form-card app-fade-stagger">
           <h2>Booking Summary</h2>
-          <div className="surgery-summary-line"><span>Surgery</span><strong>{booking.surgeryName}</strong></div>
+          <div className="surgery-summary-line"><span>Treatment</span><strong>{booking.surgeryName}</strong></div>
           <div className="surgery-summary-line"><span>Treatment</span><strong>{booking.treatmentType}</strong></div>
           <div className="surgery-summary-line"><span>Package</span><strong>{booking.packageName}</strong></div>
           <div className="surgery-summary-line"><span>Status</span><strong>Free consultation request</strong></div>

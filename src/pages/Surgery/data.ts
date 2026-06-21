@@ -45,7 +45,7 @@ const defaultHospitals: SurgeryTopHospital[] = [
 const defaultFeatures = ['Insurance Support', 'Free Consultation', 'Hospital Admission', 'Follow-up Care']
 const defaultInclusions = ['Surgeon Consultation', 'Hospital Stay', 'Pre-op Tests', 'Medicines', 'OT Charges', 'Follow-up Visit']
 
-export const surgeries: SurgeryItem[] = [
+export const fallbackSurgeries: SurgeryItem[] = [
   {
     id: 'hernia-surgery',
     name: 'Hernia Surgery',
@@ -188,8 +188,14 @@ export const surgeries: SurgeryItem[] = [
   },
 ]
 
+export const surgeries = fallbackSurgeries
+
+export function findSurgery(id?: string) {
+  return fallbackSurgeries.find((item) => item.id === id)
+}
+
 export function getSurgery(id?: string) {
-  return surgeries.find((item) => item.id === id) ?? surgeries[0]
+  return findSurgery(id) ?? fallbackSurgeries[0]
 }
 
 export function formatRupees(value: number) {

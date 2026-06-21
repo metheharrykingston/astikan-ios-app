@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FiCalendar, FiChevronRight, FiUser } from 'react-icons/fi'
 import { useNavigate, useParams } from 'react-router-dom'
-import { formatRupees, getSurgery } from './data'
+import { fetchSurgeryById } from '../../services/surgeryCatalogApi'
+import { findSurgery, formatRupees, type SurgeryItem } from './data'
 import { SurgeryHeader } from './Header'
 import './surgery.css'
 
@@ -10,20 +11,50 @@ type Gender = 'Male' | 'Female' | 'Other'
 export default function SurgeryBook() {
   const navigate = useNavigate()
   const { surgeryId } = useParams()
-  const surgery = getSurgery(surgeryId)
+  const [surgery, setSurgery] = useState<SurgeryItem | null>(findSurgery(surgeryId) ?? null)
   const [fullName, setFullName] = useState('')
   const [mobileNumber, setMobileNumber] = useState('')
   const [age, setAge] = useState('')
   const [gender, setGender] = useState<Gender>('Male')
-  const selectedPackage = surgery.packages[0]
+
+  useEffect(() => {
+    if (!surgeryId) return
+    let cancelled = false
+    fetchSurgeryById(surgeryId)
+      .then((item) => {
+        if (!cancelled) setSurgery(item)
+      })
+      .catch(() => {
+        if (!cancelled) setSurgery(findSurgery(surgeryId) ?? null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [surgeryId])
+
+  if (!surgery) {
+    return (
+      <main className="surgery-page app-page-enter">
+        <SurgeryHeader title="Treatment not found" subtitle="Please choose another surgery or treatment" />
+        <section className="surgery-shell app-content-slide">
+          <section className="surgery-form-card">
+            <button className="surgery-primary-btn app-pressable" type="button" onClick={() => navigate('/surgeries')}>Browse Treatments</button>
+          </section>
+        </section>
+      </main>
+    )
+  }
+
+  const activeSurgery: SurgeryItem = surgery
+  const selectedPackage = activeSurgery.packages[0]
 
   const payload = useMemo(() => ({
-    surgeryId: surgery.id,
-    surgeryName: surgery.name,
-    treatmentType: surgery.subtitle,
+    surgeryId: activeSurgery.id,
+    surgeryName: activeSurgery.name,
+    treatmentType: activeSurgery.subtitle,
     packageName: selectedPackage.label,
     packagePrice: selectedPackage.price,
-    hospitalName: surgery.hospitals[0]?.name ?? 'Partner Hospital',
+    hospitalName: activeSurgery.hospitals[0]?.name ?? 'Partner Hospital',
     date: 'Today',
     day: 'Care team callback',
     time: 'Within 15 mins',
@@ -31,15 +62,15 @@ export default function SurgeryBook() {
     location: 'Astikan partner hospital',
     patient: { fullName, mobileNumber, age, gender },
     amount: selectedPackage.price,
-  }), [age, fullName, gender, mobileNumber, selectedPackage.label, selectedPackage.price, surgery])
+  }), [activeSurgery, age, fullName, gender, mobileNumber, selectedPackage.label, selectedPackage.price])
 
   function continueToConfirm() {
-    navigate(`/surgeries/${surgery.id}/confirm`, { state: payload })
+    navigate(`/surgeries/${activeSurgery.id}/confirm`, { state: payload })
   }
 
   return (
     <main className="surgery-page app-page-enter">
-      <SurgeryHeader title="Book Consultation" subtitle={surgery.name} />
+      <SurgeryHeader title="Book Consultation" subtitle={activeSurgery.name} />
       <section className="surgery-shell with-bottom-cta app-content-slide">
         <article className="surgery-price-card app-fade-stagger">
           <div className="surgery-starting-box">
@@ -49,7 +80,7 @@ export default function SurgeryBook() {
           <div className="surgery-benefit-stack">
             <div className="surgery-benefit">
               <span className="surgery-benefit-icon"><FiCalendar /></span>
-              <div><h3>{surgery.name}</h3><p>{selectedPackage.room} · {selectedPackage.stay}</p></div>
+              <div><h3>{activeSurgery.name}</h3><p>{selectedPackage.room} · {selectedPackage.stay}</p></div>
             </div>
           </div>
         </article>
@@ -66,7 +97,7 @@ export default function SurgeryBook() {
 
         <section className="surgery-form-card app-fade-stagger">
           <h2>Booking Summary</h2>
-          <div className="surgery-summary-line"><span>Surgery</span><strong>{surgery.name}</strong></div>
+          <div className="surgery-summary-line"><span>Surgery</span><strong>{activeSurgery.name}</strong></div>
           <div className="surgery-summary-line"><span>Package</span><strong>{selectedPackage.label}</strong></div>
           <div className="surgery-summary-line"><span>Hospital</span><strong>{payload.hospitalName}</strong></div>
           <div className="surgery-summary-line"><span>Callback</span><strong>Within 15 mins</strong></div>
