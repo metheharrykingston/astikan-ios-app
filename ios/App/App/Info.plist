@@ -32,6 +32,16 @@
 				<string>com.googleusercontent.apps.201357365434-7lav4l8jve7dkpeh761jsjuac2a4do2u</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Firebase Phone Auth reCAPTCHA</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app-1-201357365434-ios-ae60cd7f4d710c46eaf283</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>

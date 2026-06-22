@@ -81,18 +81,17 @@ workflows:
           xcodebuild -showdestinations \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" || true
-      - name: Build unsigned iOS Simulator .app for Codemagic Quick Launch
+      - name: Build signed iOS Simulator .app for Codemagic Quick Launch
         script: |
           set -euo pipefail
+          # Important: do NOT disable code signing for this simulator build.
+          # Firebase/Google Auth needs keychain entitlements to be embedded in the .app.
           xcodebuild build \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -sdk iphonesimulator \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
             | tee /tmp/xcodebuild-ios-simulator.log
       - name: Verify simulator .app artifact
         script: |
@@ -109,6 +108,13 @@ workflows:
           file "$APP_PATH/$EXECUTABLE_NAME" || true
           lipo -info "$APP_PATH/$EXECUTABLE_NAME" || true
           du -sh "$APP_PATH"
+          echo "--- Embedded entitlements ---"
+          codesign -d --entitlements :- "$APP_PATH" > /tmp/ios-preview-entitlements.plist 2>/dev/null || true
+          cat /tmp/ios-preview-entitlements.plist || true
+          if ! grep -q "keychain-access-groups" /tmp/ios-preview-entitlements.plist; then
+            echo "ERROR: keychain-access-groups entitlement missing. Google/Firebase Auth can throw keychain errors without it."
+            exit 1
+          fi
     artifacts:
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphonesimulator/*.app
       - /tmp/xcodebuild-ios-simulator.log
